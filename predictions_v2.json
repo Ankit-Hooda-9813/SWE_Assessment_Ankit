@@ -1,0 +1,641 @@
+[
+  {
+    "name": "call_001.ogg",
+    "status": "ok",
+    "result": {
+      "emotional_tone": "upset",
+      "emotional_intensity": "high",
+      "background_noise_present": false,
+      "background_noise_type": "",
+      "background_noise_severity": "none",
+      "audio_quality": "clear",
+      "speaker_overlap_present": false,
+      "long_silence_present": false,
+      "confidence": 0.58
+    },
+    "error": null,
+    "duration_sec": 30.94,
+    "timings": {
+      "decode": 0.13,
+      "acoustics": 0.058,
+      "asr": 2.638,
+      "diarize": 0.0,
+      "emotion": 7.254,
+      "emotion2vec": 9.067,
+      "tone": 4.424,
+      "total": 23.572
+    },
+    "diagnostics": {
+      "confidence": {
+        "final": 0.583,
+        "components": {
+          "tone_model": 0.405,
+          "ser_llm_agreement": 0.45,
+          "evidence_quality": 0.9,
+          "measurement_margin": 0.491,
+          "provider_health": 0.65
+        },
+        "weights": {
+          "tone_model": 0.4,
+          "evidence_quality": 0.25,
+          "measurement_margin": 0.2,
+          "provider_health": 0.15
+        },
+        "tone_provider": "gemini",
+        "tone_model": "gemini-3.5-flash-lite",
+        "degraded": true,
+        "degraded_notice": "Gracefully degraded: the primary tone model's free daily quota is spent, so a fallback model answered. Emotional tone is less accurate on the fallback (2/3 versus 0/3 on the labelled clips); every other field is unaffected and still fully measured. This deployment runs entirely on free tiers for an assignment, and that trade-off is deliberate \u2014 a paid key removes the limit at roughly $1.59 per 1,000 audio-minutes.",
+        "tone_rationale": "The customer repeatedly called out 'Hello?' multiple times in quick succession due to the automated agent's delay in responding.",
+        "emotion": {
+          "arousal": 0.687,
+          "dominance": 0.675,
+          "valence": 0.554,
+          "arousal_std": 0.028,
+          "valence_std": 0.068,
+          "peak_arousal": 0.715,
+          "sustained_high_frac": 0.5,
+          "min_valence": 0.487,
+          "windows": 2,
+          "latency_sec": 7.25,
+          "backend": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
+          "error": ""
+        },
+        "emotion2vec": {
+          "probs": {
+            "angry": 0.8559,
+            "disgusted": 0.0109,
+            "fearful": 0.0024,
+            "happy": 0.3798,
+            "neutral": 0.0842,
+            "other": 0.0189,
+            "sad": 0.0014,
+            "surprised": 0.3895,
+            "unknown": 0.1731
+          },
+          "top_label": "angry",
+          "windows": 2,
+          "latency_sec": 9.07,
+          "error": ""
+        },
+        "llm_tone_before_fusion": "frustrated",
+        "transcript_backend": "groq/whisper-large-v3-turbo",
+        "transcript_words": 39
+      },
+      "notes": [
+        "intensity set from measured arousal (high); language model had said medium",
+        "frustrated -> upset: emotion2vec+ independently reads 'angry' (0.86), corroborated by non-yielding delivery",
+        "speaker-overlap decision was borderline (weakest detector)",
+        "Gracefully degraded: the primary tone model's free daily quota is spent, so a fallback model answered. Emotional tone is less accurate on the fallback (2/3 versus 0/3 on the labelled clips); every other field is unaffected and still fully measured. This deployment runs entirely on free tiers for an assignment, and that trade-off is deliberate \u2014 a paid key removes the limit at roughly $1.59 per 1,000 audio-minutes.",
+        "fell back to gemini after the primary provider failed",
+        "acoustic and language models disagreed on both tone and intensity"
+      ],
+      "tone_provider": "gemini",
+      "tone_attempts": [
+        "gemini:ok"
+      ],
+      "transcript": {
+        "backend": "groq/whisper-large-v3-turbo",
+        "words": 39,
+        "error": "",
+        "preview": "Come on. Hi, I'm Erica from Toyota of Braintree. How can I help? Yes, hi. Are you a real person? Hello? Hello? Hello? Hello? [repeated 6 times] Yes, hello, I'm here. How can I help you with your vehicle?"
+      },
+      "emotion": {
+        "arousal": 0.687,
+        "dominance": 0.675,
+        "valence": 0.554,
+        "arousal_std": 0.028,
+        "valence_std": 0.068,
+        "peak_arousal": 0.715,
+        "sustained_high_frac": 0.5,
+        "min_valence": 0.487,
+        "windows": 2,
+        "latency_sec": 7.25,
+        "backend": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
+        "error": ""
+      },
+      "speakers": {},
+      "tone_read_customer_only": false,
+      "acoustics": {
+        "noise": {
+          "windows_total": 26,
+          "windows_noisy": 1,
+          "windows_audible": 1,
+          "dwell_frac": 0.038,
+          "dwell_sec": 1.19,
+          "worst_snr_db": 25.2,
+          "median_noise_dbfs": -63.8,
+          "noisy_spans": [
+            [
+              4.0,
+              6.0
+            ]
+          ],
+          "audibility_gate_dbfs": -51.0,
+          "snr_gate_db": 42.0,
+          "dwell_threshold": 0.06
+        },
+        "noise_type_scores": {},
+        "quality": {
+          "band_edge_hz": 3520,
+          "speech_level_dbfs": -13.2,
+          "peak_dbfs": 0.0,
+          "clip_ratio": 1e-05,
+          "dropout_frac": 0.0,
+          "reverb_decay_ms": 10,
+          "robotic_score": 0.0,
+          "crest_factor_db": 18.6,
+          "defects": []
+        },
+        "overlap": {
+          "backend": "cepstral",
+          "competing_frame_frac": 0.2021,
+          "frames_scored": 747,
+          "score_p90": 0.925,
+          "overlap_sec": 2.42,
+          "decision_threshold": 0.25,
+          "margin": 0.191,
+          "reliability": "low \u2014 measured AUC 0.593 on the ovlp_ dev-set subset, AUC 0.590 on real Harper Valley audio"
+        },
+        "long_silence": {
+          "longest_internal_silence_sec": 2.83,
+          "qualifying_gaps": 0,
+          "gap_starts": [],
+          "lead_silence_sec": 0.0,
+          "trail_silence_sec": 0.35,
+          "threshold_sec": 8.0
+        },
+        "prosody": {
+          "f0_median_hz": 250.0,
+          "f0_range_semitones": 15.316,
+          "f0_variability": 0.254,
+          "energy_range_db": 42.268,
+          "energy_variability": 0.595,
+          "speech_rate_proxy": 0.55,
+          "pause_ratio": 0.539,
+          "mean_pause_sec": 0.969,
+          "longest_pause_sec": 2.83,
+          "speech_level_dbfs": -13.179,
+          "voiced_fraction": 0.456,
+          "jitter": 0.084,
+          "shimmer": 0.123
+        },
+        "vad": {
+          "speech_ratio": 0.456,
+          "speech_segments": 18,
+          "threshold_dbfs": -55.0
+        },
+        "source": {
+          "duration_sec": 30.94,
+          "dual_mono": true
+        },
+        "analysis_sec": 0.058
+      },
+      "privacy_mode": "hybrid",
+      "audio_left_container": false
+    }
+  },
+  {
+    "name": "call_002.ogg",
+    "status": "ok",
+    "result": {
+      "emotional_tone": "neutral",
+      "emotional_intensity": "medium",
+      "background_noise_present": true,
+      "background_noise_type": "TV",
+      "background_noise_severity": "medium",
+      "audio_quality": "clear",
+      "speaker_overlap_present": true,
+      "long_silence_present": false,
+      "confidence": 0.74
+    },
+    "error": null,
+    "duration_sec": 34.96,
+    "timings": {
+      "decode": 0.136,
+      "acoustics": 1.236,
+      "asr": 18.053,
+      "diarize": 0.0,
+      "emotion": 1.381,
+      "emotion2vec": 0.996,
+      "tone": 2.521,
+      "total": 24.326
+    },
+    "diagnostics": {
+      "confidence": {
+        "final": 0.741,
+        "components": {
+          "tone_model": 0.637,
+          "ser_llm_agreement": 0.75,
+          "evidence_quality": 1.0,
+          "measurement_margin": 0.691,
+          "provider_health": 0.65
+        },
+        "weights": {
+          "tone_model": 0.4,
+          "evidence_quality": 0.25,
+          "measurement_margin": 0.2,
+          "provider_health": 0.15
+        },
+        "tone_provider": "gemini",
+        "tone_model": "gemini-3.5-flash-lite",
+        "degraded": true,
+        "degraded_notice": "Gracefully degraded: the primary tone model's free daily quota is spent, so a fallback model answered. Emotional tone is less accurate on the fallback (2/3 versus 0/3 on the labelled clips); every other field is unaffected and still fully measured. This deployment runs entirely on free tiers for an assignment, and that trade-off is deliberate \u2014 a paid key removes the limit at roughly $1.59 per 1,000 audio-minutes.",
+        "tone_rationale": "The customer used an insulting colloquialism when switching to Spanish, indicating clear annoyance with the automated system.",
+        "emotion": {
+          "arousal": 0.6,
+          "dominance": 0.631,
+          "valence": 0.63,
+          "arousal_std": 0.041,
+          "valence_std": 0.083,
+          "peak_arousal": 0.671,
+          "sustained_high_frac": 0.2,
+          "min_valence": 0.486,
+          "windows": 5,
+          "latency_sec": 1.38,
+          "backend": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
+          "error": ""
+        },
+        "emotion2vec": {
+          "probs": {
+            "angry": 0.0072,
+            "disgusted": 0.113,
+            "fearful": 0.0186,
+            "happy": 0.2864,
+            "neutral": 0.9999,
+            "other": 0.0183,
+            "sad": 0.4441,
+            "surprised": 0.0123,
+            "unknown": 0.0205
+          },
+          "top_label": "neutral",
+          "windows": 5,
+          "latency_sec": 1.0,
+          "error": ""
+        },
+        "llm_tone_before_fusion": "frustrated",
+        "transcript_backend": "groq/whisper-large-v3-turbo",
+        "transcript_words": 41
+      },
+      "notes": [
+        "negative tone withdrawn: emotion2vec+ independently reads 'neutral' (0.9999), not corroborated by acoustic escalation (0.50) or valence",
+        "speaker-overlap decision was borderline (weakest detector)",
+        "Gracefully degraded: the primary tone model's free daily quota is spent, so a fallback model answered. Emotional tone is less accurate on the fallback (2/3 versus 0/3 on the labelled clips); every other field is unaffected and still fully measured. This deployment runs entirely on free tiers for an assignment, and that trade-off is deliberate \u2014 a paid key removes the limit at roughly $1.59 per 1,000 audio-minutes.",
+        "fell back to gemini after the primary provider failed"
+      ],
+      "tone_provider": "gemini",
+      "tone_attempts": [
+        "gemini:ok"
+      ],
+      "transcript": {
+        "backend": "groq/whisper-large-v3-turbo",
+        "words": 41,
+        "error": "",
+        "preview": "Hi, I'm Erica from Toyota of Braintree. How can I help? Spanish, please. Hola, soy Erica de Toyota de Braintree. \u00bfC\u00f3mo puedo ayudarle? Espa\u00f1ol, mamahuevo. Indica espacios de 4 metros entre neum\u00e1ticos. Al parecer se trata de un veh\u00edculo pesado con..."
+      },
+      "emotion": {
+        "arousal": 0.6,
+        "dominance": 0.631,
+        "valence": 0.63,
+        "arousal_std": 0.041,
+        "valence_std": 0.083,
+        "peak_arousal": 0.671,
+        "sustained_high_frac": 0.2,
+        "min_valence": 0.486,
+        "windows": 5,
+        "latency_sec": 1.38,
+        "backend": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
+        "error": ""
+      },
+      "speakers": {},
+      "tone_read_customer_only": false,
+      "acoustics": {
+        "noise": {
+          "windows_total": 30,
+          "windows_noisy": 4,
+          "windows_audible": 4,
+          "dwell_frac": 0.133,
+          "dwell_sec": 4.66,
+          "worst_snr_db": 23.4,
+          "median_noise_dbfs": -62.8,
+          "noisy_spans": [
+            [
+              4.0,
+              6.0
+            ],
+            [
+              5.0,
+              7.0
+            ],
+            [
+              17.0,
+              19.0
+            ],
+            [
+              18.0,
+              20.0
+            ]
+          ],
+          "audibility_gate_dbfs": -51.0,
+          "snr_gate_db": 42.0,
+          "dwell_threshold": 0.06
+        },
+        "noise_type_scores": {
+          "TV": 0.75,
+          "keyboard typing": 0.197,
+          "road noise": 0.024,
+          "sharp static": 0.021,
+          "wind": 0.004,
+          "music": 0.003,
+          "office chatter": 0.001,
+          "mechanical hum": 0.0
+        },
+        "quality": {
+          "band_edge_hz": 3680,
+          "speech_level_dbfs": -23.2,
+          "peak_dbfs": -4.3,
+          "clip_ratio": 0.0,
+          "dropout_frac": 0.0,
+          "reverb_decay_ms": 50,
+          "robotic_score": 0.0,
+          "crest_factor_db": 22.8,
+          "defects": []
+        },
+        "overlap": {
+          "backend": "cepstral",
+          "competing_frame_frac": 0.2799,
+          "frames_scored": 793,
+          "score_p90": 0.946,
+          "overlap_sec": 3.55,
+          "decision_threshold": 0.25,
+          "margin": 0.12,
+          "reliability": "low \u2014 measured AUC 0.593 on the ovlp_ dev-set subset, AUC 0.590 on real Harper Valley audio"
+        },
+        "long_silence": {
+          "longest_internal_silence_sec": 3.17,
+          "qualifying_gaps": 0,
+          "gap_starts": [],
+          "lead_silence_sec": 0.0,
+          "trail_silence_sec": 0.23,
+          "threshold_sec": 8.0
+        },
+        "prosody": {
+          "f0_median_hz": 205.128,
+          "f0_range_semitones": 18.639,
+          "f0_variability": 0.33,
+          "energy_range_db": 37.565,
+          "energy_variability": 0.306,
+          "speech_rate_proxy": 0.601,
+          "pause_ratio": 0.338,
+          "mean_pause_sec": 0.559,
+          "longest_pause_sec": 3.17,
+          "speech_level_dbfs": -23.221,
+          "voiced_fraction": 0.657,
+          "jitter": 0.156,
+          "shimmer": 0.14
+        },
+        "vad": {
+          "speech_ratio": 0.657,
+          "speech_segments": 22,
+          "threshold_dbfs": -55.0
+        },
+        "source": {
+          "duration_sec": 34.96,
+          "dual_mono": true
+        },
+        "analysis_sec": 1.236
+      },
+      "privacy_mode": "hybrid",
+      "audio_left_container": false
+    }
+  },
+  {
+    "name": "call_003.ogg",
+    "status": "ok",
+    "result": {
+      "emotional_tone": "neutral",
+      "emotional_intensity": "medium",
+      "background_noise_present": true,
+      "background_noise_type": "sharp static",
+      "background_noise_severity": "medium",
+      "audio_quality": "clear",
+      "speaker_overlap_present": false,
+      "long_silence_present": false,
+      "confidence": 0.76
+    },
+    "error": null,
+    "duration_sec": 171.92,
+    "timings": {
+      "decode": 0.404,
+      "acoustics": 0.333,
+      "asr": 1.524,
+      "diarize": 0.0,
+      "emotion": 2.486,
+      "emotion2vec": 2.003,
+      "tone": 1.382,
+      "total": 8.14
+    },
+    "diagnostics": {
+      "confidence": {
+        "final": 0.759,
+        "components": {
+          "tone_model": 0.675,
+          "ser_llm_agreement": 0.75,
+          "evidence_quality": 1.0,
+          "measurement_margin": 0.71,
+          "provider_health": 0.65
+        },
+        "weights": {
+          "tone_model": 0.4,
+          "evidence_quality": 0.25,
+          "measurement_margin": 0.2,
+          "provider_health": 0.15
+        },
+        "tone_provider": "gemini",
+        "tone_model": "gemini-3.5-flash-lite",
+        "degraded": true,
+        "degraded_notice": "Gracefully degraded: the primary tone model's free daily quota is spent, so a fallback model answered. Emotional tone is less accurate on the fallback (2/3 versus 0/3 on the labelled clips); every other field is unaffected and still fully measured. This deployment runs entirely on free tiers for an assignment, and that trade-off is deliberate \u2014 a paid key removes the limit at roughly $1.59 per 1,000 audio-minutes.",
+        "tone_rationale": "The customer calmly discusses scheduling and drop-off dates without expressing frustration or agitation despite realizing the dealership will be closed.",
+        "emotion": {
+          "arousal": 0.568,
+          "dominance": 0.594,
+          "valence": 0.481,
+          "arousal_std": 0.089,
+          "valence_std": 0.097,
+          "peak_arousal": 0.729,
+          "sustained_high_frac": 0.2,
+          "min_valence": 0.279,
+          "windows": 10,
+          "latency_sec": 2.49,
+          "backend": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
+          "error": ""
+        },
+        "emotion2vec": {
+          "probs": {
+            "angry": 0.0043,
+            "disgusted": 0.0629,
+            "fearful": 0.0228,
+            "happy": 0.0156,
+            "neutral": 1.0,
+            "other": 0.0416,
+            "sad": 0.8025,
+            "surprised": 0.0057,
+            "unknown": 0.0066
+          },
+          "top_label": "neutral",
+          "windows": 10,
+          "latency_sec": 2.0,
+          "error": ""
+        },
+        "llm_tone_before_fusion": "neutral",
+        "transcript_backend": "groq/whisper-large-v3-turbo",
+        "transcript_words": 357
+      },
+      "notes": [
+        "intensity set from measured arousal (medium); language model had said low",
+        "speaker-overlap decision was borderline (weakest detector)",
+        "Gracefully degraded: the primary tone model's free daily quota is spent, so a fallback model answered. Emotional tone is less accurate on the fallback (2/3 versus 0/3 on the labelled clips); every other field is unaffected and still fully measured. This deployment runs entirely on free tiers for an assignment, and that trade-off is deliberate \u2014 a paid key removes the limit at roughly $1.59 per 1,000 audio-minutes.",
+        "fell back to gemini after the primary provider failed"
+      ],
+      "tone_provider": "gemini",
+      "tone_attempts": [
+        "gemini:ok"
+      ],
+      "transcript": {
+        "backend": "groq/whisper-large-v3-turbo",
+        "words": 357,
+        "error": "",
+        "preview": "Hi, I'm Erica from Lexington Toyota. How can I help? Erica, I want an appointment for my car, please. I can help with that. What type of service do you need? I need to have an ordinary checkup, once a month, once every, what, four months or six months checkup. and I want to leave"
+      },
+      "emotion": {
+        "arousal": 0.568,
+        "dominance": 0.594,
+        "valence": 0.481,
+        "arousal_std": 0.089,
+        "valence_std": 0.097,
+        "peak_arousal": 0.729,
+        "sustained_high_frac": 0.2,
+        "min_valence": 0.279,
+        "windows": 10,
+        "latency_sec": 2.49,
+        "backend": "audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim",
+        "error": ""
+      },
+      "speakers": {},
+      "tone_read_customer_only": false,
+      "acoustics": {
+        "noise": {
+          "windows_total": 159,
+          "windows_noisy": 47,
+          "windows_audible": 47,
+          "dwell_frac": 0.296,
+          "dwell_sec": 50.81,
+          "worst_snr_db": 18.5,
+          "median_noise_dbfs": -64.0,
+          "noisy_spans": [
+            [
+              4.0,
+              6.0
+            ],
+            [
+              5.0,
+              7.0
+            ],
+            [
+              19.0,
+              21.0
+            ],
+            [
+              23.0,
+              25.0
+            ],
+            [
+              33.0,
+              35.0
+            ],
+            [
+              36.0,
+              38.0
+            ],
+            [
+              37.0,
+              39.0
+            ],
+            [
+              38.0,
+              40.0
+            ]
+          ],
+          "audibility_gate_dbfs": -51.0,
+          "snr_gate_db": 42.0,
+          "dwell_threshold": 0.06
+        },
+        "noise_type_scores": {
+          "sharp static": 0.997,
+          "mechanical hum": 0.003,
+          "keyboard typing": 0.001,
+          "TV": 0.0,
+          "music": 0.0,
+          "office chatter": 0.0,
+          "road noise": 0.0,
+          "wind": 0.0
+        },
+        "quality": {
+          "band_edge_hz": 3680,
+          "speech_level_dbfs": -13.6,
+          "peak_dbfs": 0.8,
+          "clip_ratio": 2e-05,
+          "dropout_frac": 0.0,
+          "reverb_decay_ms": 10,
+          "robotic_score": 0.0,
+          "crest_factor_db": 19.7,
+          "defects": []
+        },
+        "overlap": {
+          "backend": "cepstral",
+          "competing_frame_frac": 0.1962,
+          "frames_scored": 4832,
+          "score_p90": 0.922,
+          "overlap_sec": 15.17,
+          "decision_threshold": 0.25,
+          "margin": 0.215,
+          "reliability": "low \u2014 measured AUC 0.593 on the ovlp_ dev-set subset, AUC 0.590 on real Harper Valley audio"
+        },
+        "long_silence": {
+          "longest_internal_silence_sec": 7.31,
+          "qualifying_gaps": 0,
+          "gap_starts": [],
+          "lead_silence_sec": 3.92,
+          "trail_silence_sec": 0.27,
+          "threshold_sec": 8.0
+        },
+        "prosody": {
+          "f0_median_hz": 186.047,
+          "f0_range_semitones": 16.394,
+          "f0_variability": 0.331,
+          "energy_range_db": 39.1,
+          "energy_variability": 0.495,
+          "speech_rate_proxy": 0.512,
+          "pause_ratio": 0.273,
+          "mean_pause_sec": 0.526,
+          "longest_pause_sec": 7.31,
+          "speech_level_dbfs": -13.636,
+          "voiced_fraction": 0.709,
+          "jitter": 0.106,
+          "shimmer": 0.17
+        },
+        "vad": {
+          "speech_ratio": 0.709,
+          "speech_segments": 88,
+          "threshold_dbfs": -55.0
+        },
+        "source": {
+          "duration_sec": 171.92,
+          "dual_mono": true
+        },
+        "analysis_sec": 0.333
+      },
+      "privacy_mode": "hybrid",
+      "audio_left_container": false
+    }
+  }
+]
