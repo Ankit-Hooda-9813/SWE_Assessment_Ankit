@@ -228,33 +228,40 @@ stage) — instrumented against the 3 known calls, not estimated.
 
 | Component | $/audio-minute | Latency (steady-state, warm process) |
 |---|---|---|
-| DSP — 6 measured fields, incl. PANNs | $0.00000 | 0.86 s/min |
-| SER — wav2vec2-dim (`emotional_intensity`) | $0.00000 | 1.14 s/min |
-| SER — emotion2vec+ (v2 addition) | $0.00000 | 0.90 s/min |
-| ASR — Groq whisper-large-v3-turbo | $0.00067 | 0.80 s/min |
-| LLM — tone, the one metered call | $0.00092 | 1.93 s/min |
-| **API total** | **$0.00159 — unchanged from v1** | **5.80 s/min processing** |
+| DSP — 6 measured fields, incl. PANNs (now confidence-gated) | $0.00000 | **0.31 s/min** (down from 0.86 — gate skips PANNs when spectral-only is already confident) |
+| SER — wav2vec2-dim (`emotional_intensity`) | $0.00000 | 1.99 s/min |
+| SER — emotion2vec+ (v2 addition) | $0.00000 | 1.49 s/min |
+| ASR — Groq whisper-large-v3-turbo | $0.00067 | 0.81 s/min |
+| LLM — tone, the one metered call | $0.00092 | 1.01 s/min |
+| **API total** | **$0.00159 — unchanged from v1** | **5.89 s/min processing** |
 | Ceiling | $0.00300 | |
 
 **v2 added zero new metered API calls** — both new stages are local models, so
-the $/audio-minute figure is identical to v1's. What did change is wall-clock
-processing time (3.0s/min -> 5.8s/min) and memory (below). If that processing
-time is billed as rented compute rather than run on owned hardware — the EC2
-path in `infra/`, `t4g.large` at $0.067/hr — it adds **~$0.00011/min**, for a
-**fully-costed total of ~$0.00170/min, still 1.76x under the $0.003 ceiling.**
-1.9x headroom, $0.00 as actually deployed on free tiers. Two cases breach the
-ceiling and are disclosed rather than hidden: self-consistency firing on every
-clip ($0.00343), and clips under ~20 seconds, because the metered call is billed
-per request rather than per minute ($0.00553 for a 15-second file). Switching
-transcription back to local Whisper removes $0.00067 and restores 3.3x headroom
-at the cost of ~21 s per clip instead of 0.5 s.
+the $/audio-minute figure is identical to v1's, and unaffected by the
+noise-type gate fix below (that fix changes only local compute, never API
+usage). What did change is wall-clock processing time (3.0s/min -> ~5.9s/min,
+essentially unchanged since the noise-type gate fix) and memory (below). If
+that processing time is billed as rented compute rather than run on owned
+hardware — the EC2 path in `infra/`, `t4g.large` at $0.067/hr — it adds
+**~$0.00011/min**, for a **fully-costed total of ~$0.00170/min, still 1.76x
+under the $0.003 ceiling.** 1.9x headroom, $0.00 as actually deployed on free
+tiers. Two cases breach the ceiling and are disclosed rather than hidden:
+self-consistency firing on every clip ($0.00343), and clips under ~20 seconds,
+because the metered call is billed per request rather than per minute
+($0.00553 for a 15-second file). Switching transcription back to local
+Whisper removes $0.00067 and restores 3.3x headroom at the cost of ~21 s per
+clip instead of 0.5 s.
 
-**Memory: 5.3 GB peak RSS, measured** (all v2 models loaded, all 3 known calls
-processed) — up from v1's disclosed 2.4 GB (PANNs + emotion2vec+ add roughly
-1GB RAM each), against the 16 GB HF Spaces free-tier limit. Comfortably inside
-that ceiling but with meaningfully less headroom than v1 had; if local Whisper
-also loads (the ASR fallback path, not exercised in this measurement since
-Groq answered), expect this to run closer to 6-6.5 GB.
+**Memory: 3.2 GB peak RSS, measured** (re-measured after the confidence-gated
+noise-type fix — down from the earlier v2 figure of 5.3 GB, because PANNs'
+~1GB model is no longer loaded into memory at all when spectral-only is
+already confident, which held for all 3 known calls in this run). Against
+the 16 GB HF Spaces free-tier limit, comfortably under with real headroom
+restored. This is a genuine side effect of the accuracy fix, not a separate
+optimization — worth stating plainly since it wasn't the point of that
+change. Worst case (local Whisper ASR fallback also loads, or a clip lands
+on the PANNs side of the gate) still tops out well under 16GB; not
+re-measured precisely for that combination.
 
 ---
 

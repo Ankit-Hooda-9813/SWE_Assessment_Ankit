@@ -455,18 +455,31 @@ standing unexamined — it would have been easy to assume cost changed because
 the architecture did.
 
 **Latency did move**: steady-state (warm process, excluding one-time model
-load) processing time went from v1's 3.0s/audio-minute to **5.8s/audio-minute**
-— PANNs (folded into the DSP/acoustics stage) and emotion2vec+ (0.90s/min on
-its own) both add real wall-clock time even at zero API cost. If that time is
-billed as rented compute rather than run on already-owned hardware (the EC2
-path below, `t4g.large` at $0.067/hr), it adds **~$0.00011/min**, for a
-**fully-costed total of ~$0.00170/min — still 1.76x under the $0.003
-ceiling**, just with less margin than the API-only framing implies.
+load) processing time went from v1's 3.0s/audio-minute to **~5.9s/audio-minute**
+— PANNs and emotion2vec+ both add real wall-clock time even at zero API cost.
+If that time is billed as rented compute rather than run on already-owned
+hardware (the EC2 path below, `t4g.large` at $0.067/hr), it adds
+**~$0.00011/min**, for a **fully-costed total of ~$0.00170/min — still 1.76x
+under the $0.003 ceiling**, just with less margin than the API-only framing
+implies.
 
-**Memory: 5.3GB peak RSS, measured** (`resource.getrusage`, all v2 models
-loaded, all 3 known calls processed) — up from v1's disclosed 2.4GB. Still
-well inside HF Spaces' 16GB free tier and an EC2 `t4g.large`'s 8GB, but this
-is the real number, not the v1 figure, and `README.md`'s cost table has been
+**Re-measured after the confidence-gated noise-type fix** (see that section
+above): the DSP/acoustics stage specifically dropped from 0.86s/min to
+**0.31s/min**, because PANNs is now skipped entirely whenever spectral-only
+is already confident — a real, attributable latency win from an accuracy
+fix, not a separate optimization pass. Total steady-state latency is
+essentially unchanged (other stages have their own run-to-run variance that
+swamps this one stage's savings), but memory is not: **peak RSS dropped to
+3.2GB**, re-measured, down from the 5.3GB figure below — PANNs' ~1GB model is
+no longer loaded into memory at all in the common case where spectral-only
+already clears the gate, which held for all 3 known calls in this run.
+
+**Memory: 5.3GB peak RSS as originally measured** (`resource.getrusage`, all
+v2 models loaded, all 3 known calls processed, before the noise-type gate
+fix) — up from v1's disclosed 2.4GB. **Now 3.2GB after the gate fix**, per
+above. Still well inside HF Spaces' 16GB free tier and an EC2 `t4g.large`'s
+8GB either way, but this is the real, current number, not the v1 figure or
+the pre-gate-fix figure, and `README.md`'s cost table has been
 updated to match rather than left stale.
 
 ## Infra: EC2 warm-host path added alongside HF Spaces
