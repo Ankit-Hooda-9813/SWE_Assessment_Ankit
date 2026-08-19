@@ -9,11 +9,12 @@ pinned: false
 short_description: Emotional tone and background noise analysis for call audio
 ---
 
-# Voice Tone & Background Noise Analysis (v2)
+# Voice Tone & Background Noise Analysis
 
-> This is the v2 iteration of the submission. See `TECHNICAL_MEMO_V2.md` for
-> exactly what changed since v1, what was measured, and what was tried and
-> rejected — this file otherwise still describes the base system accurately.
+> This is the second pass on the submission. See `TECHNICAL_MEMO.md` for
+> everything that changed in that pass, what was measured, and what was
+> tried and rejected — this file otherwise still describes the base system
+> accurately.
 
 Analyses production call audio for emotional tone and background noise, returning
 the required nine-field schema per clip. Runs as a hosted dashboard with login,
@@ -240,14 +241,15 @@ locally, drop the three provided files back into `requirements/` yourself;
 the filenames the code expects are `call_001.ogg`, `call_002.ogg`,
 `call_003.ogg`, and `labels.csv`.
 
-### Where it stands (v2, current)
+### Where it stands (current)
 
 On the three provided clips (`hybrid` mode), **22 of 24 fields** — re-verified
-directly. v1's own memo separately recorded 22/24 too, but that number didn't
-reproduce (see `TECHNICAL_MEMO_V2.md`'s explicit v1→v2 table: independently
-re-running v1's own unmodified code measures 20/24). v2's 22/24 is the same
-headline figure v1 noted, arrived at honestly and gate-fixed rather than
-carried forward unverified:
+directly. The first pass had also recorded 22/24, but re-running that same
+code fresh at the start of this pass, before changing anything, only
+reproduced 20/24 (see `TECHNICAL_MEMO.md`'s opening table for the full
+correction). This pass's 22/24 is the same headline figure, arrived at
+honestly and gate-fixed against the number we could actually stand behind,
+not carried forward unverified:
 
 | Field | Provided clips | Synthetic dev set | Real external audio |
 |---|---|---|---|
@@ -258,7 +260,7 @@ carried forward unverified:
 | `long_silence_present` | 3/3 | 1.000 | **0.778** (AMI Corpus, 27 real meeting windows — perfect precision) |
 | `emotional_intensity` | 3/3 | not validated | not tested |
 | `speaker_overlap_present` | 2/3 | AUC 0.593 (150-clip `ovlp_` subset) | **AUC 0.590** (60 real Harper Valley calls) — see below |
-| `emotional_tone` | 2/3 (up from 0/3, see below) | not validated | **0.84** coarse polarity (Harper Valley, 21/25); MELD attempted, domain-mismatched, excluded — see `TECHNICAL_MEMO_V2.md` |
+| `emotional_tone` | 2/3 (up from 0/3, see below) | not validated | **0.84** coarse polarity (Harper Valley, 21/25); MELD attempted, domain-mismatched, excluded — see `TECHNICAL_MEMO.md` |
 
 `emotional_tone` went from 0/3 to 2/3 in v2 via a narrow fix: emotion2vec+, a
 second independent SER model, corroborates the LLM's polarity call in two
@@ -347,7 +349,7 @@ tried NVIDIA's ungated Sortformer diarization model as a fix: excellent on
 synthetic data (AUC 0.831), dropped to 0.333 on real audio — worse than the
 weak baseline it was meant to replace — investigated and rejected rather than
 shipped on the strength of its synthetic number. Full writeup, including what
-was ruled out and why, in `TECHNICAL_MEMO_V2.md`. **The actual fix,
+was ruled out and why, in `TECHNICAL_MEMO.md`. **The actual fix,
 `pyannote/segmentation-3.0`, is coded and working against the current
 pyannote.audio 4.0 API** (wired behind `OVERLAP_BACKEND=pyannote` + `HF_TOKEN`)
 but is licence-gated and blocked on a one-time manual acceptance at
@@ -377,7 +379,7 @@ the labelled answer. A below-baseline result on an external dataset (MELD,
 scripted TV dialogue) was investigated the same way and found to be a
 domain-acoustic mismatch, not a tone-judgement failure — excluded from the
 scored record rather than reported as a capability finding; see
-`TECHNICAL_MEMO_V2.md` for the full diagnosis.
+`TECHNICAL_MEMO.md` for the full diagnosis.
 
 **`long_silence_present` now has real independent validation, and it holds
 up.** Previously untestable (the 3 known clips are all negatives, so the

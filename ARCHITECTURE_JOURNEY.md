@@ -2,9 +2,9 @@
 
 This is a plain-language walkthrough of the whole system: what AutoAce actually asked for,
 what was tried, what broke, and why the current design looks the way it does. Everything
-here is backed by a measurement somewhere in this repo (`TECHNICAL_MEMO.md`,
-`TECHNICAL_MEMO_V2.md`, `eval/`) — this file exists to connect those dots into one story
-instead of making you piece it together across four documents.
+here is backed by a measurement somewhere in this repo (`TECHNICAL_MEMO.md`, `eval/`) —
+this file exists to connect those dots into one story instead of making you piece it
+together across the codebase yourself.
 
 ---
 
@@ -170,16 +170,17 @@ no reason to pay for or risk an API call there either.
 that it doesn't train on API data — worth the trade given `hybrid` privacy mode already
 permits transcript-and-measurements (not audio) to leave the container.
 
-## 5. What changed in v2, and why each change happened
+## 5. What changed in the second pass, and why each change happened
 
-v1 scored 22/24 as claimed but only **20/24 on independent re-run** — that gap is disclosed
-plainly in `TECHNICAL_MEMO_V2.md` rather than picking whichever number was convenient, because
-trusting your own reproduction over an inherited claim is the same discipline the rest of
-this document argues for. v2's job was closing that real gap, not chasing the claimed one.
+The first pass had recorded 22/24, but re-running that same code fresh at the start of this
+pass, before touching anything, only reproduced **20/24** — that gap is disclosed plainly in
+`TECHNICAL_MEMO.md` rather than picking whichever number was convenient, the same discipline
+the rest of this document argues for. This pass's job was closing that real gap, measured
+against the number we could actually stand behind.
 
 ### 5.1 Shipped: PANNs CNN14 as a second opinion for `background_noise_type`
 
-The v1 spectral-only classifier scored 0.690 macro-F1 on the dev set and specifically
+The first pass's spectral-only classifier scored 0.690 macro-F1 on the dev set and specifically
 couldn't detect `keyboard typing` at all (0.00 F1). Adding `qiuqiangkong/audioset_tagging_cnn`
 (an AudioSet-trained tagger) as a second signal, combined with the spectral features, raised
 that to **0.829** — concentrated almost entirely in the category the first model literally
@@ -203,7 +204,7 @@ stage got measurably faster, as a side effect of an accuracy fix, not a separate
 
 ### 5.2 Blocked, not abandoned: the pyannote overlap fix
 
-v1's overlap detector was already the weakest field (disclosed AUC 0.66 in the original memo).
+The overlap detector was already the weakest field in the first pass (disclosed AUC 0.66 at the time).
 Re-measuring it properly — against only the 150 clips that actually vary this label, not all
 600 dev-set clips where 450 are trivially negative and dilute the number — found the real AUC
 is **0.593**, barely above a coin flip. That's a real, now twice-independently-confirmed
@@ -320,8 +321,8 @@ polished-looking result would be:
 
 ## 7. Where things stand now
 
-**22/24 on the known calls** (current, single run, all fixes applied) — up from the honestly
-re-measured 20/24 v1 baseline. Both remaining misses are on the same clip (`call_003`) and
+**22/24 on the known calls** (current, single run, all fixes applied) — up from the 20/24 we
+independently re-verified at the start of this pass. Both remaining misses are on the same clip (`call_003`) and
 both are disclosed, root-caused, and deliberately left unpatched rather than forced: its tone
 truth (`satisfied`) has no support in any of the three independent signal channels, and its
 overlap truth sits at the 10th percentile of the positive-class distribution — a real ceiling

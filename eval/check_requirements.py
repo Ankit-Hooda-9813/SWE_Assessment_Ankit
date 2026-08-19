@@ -192,7 +192,7 @@ def check_clarifications() -> None:
                 "the three labelled clips and clearly separated")
     check("11", "External APIs disclosed with model, pricing, retention",
           PASS, "Azure OpenAI (gpt-5-mini) and Groq named with per-token "
-                "pricing and retention policy in TECHNICAL_MEMO_V2.md's "
+                "pricing and retention policy in TECHNICAL_MEMO.md's "
                 "'External service disclosure' table")
 
 

@@ -1,7 +1,7 @@
 """Test WavLM self-supervised features for `speaker_overlap_present`.
 
 Research artifact, kept for reproducibility even though this backend is not
-currently wired into `app/audio/overlap.py` (see `TECHNICAL_MEMO_V2.md` and
+currently wired into `app/audio/overlap.py` (see `TECHNICAL_MEMO.md` and
 `result.md` for the full trade-off and the deployment decision not to ship
 it). Rerunning this script reproduces the dev-set AUC comparison that
 motivated the investigation.
@@ -156,7 +156,7 @@ def main(devset: Path, seed: int = 20250808) -> None:
         key=lambda t: t[1],
     )
     print(f"best: {best_name} at AUC {best_auc:.3f}")
-    print("Not wired into app/audio/overlap.py — see TECHNICAL_MEMO_V2.md and result.md "
+    print("Not wired into app/audio/overlap.py — see TECHNICAL_MEMO.md and result.md "
           "for the real-audio validation and the deployment decision.")
 
 

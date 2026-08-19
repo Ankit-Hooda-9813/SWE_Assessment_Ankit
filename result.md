@@ -22,17 +22,17 @@ themselves to.
 
 ## Master matrix
 
-| Field | 3 known calls (6-trial, n=18) | Harper Valley (n=25) | MELD (n=30) | AMI Corpus (n=27) | AMI 2-speaker (n=50) | HaessigDB (n=25)† |
-|---|---|---|---|---|---|---|
-| `emotional_tone` | 12/18 | 21/25 | 12/30 | — | — | 16/25‡ |
-| `emotional_intensity` | 18/18 | — | — | — | — | 13/25‡ |
-| `background_noise_present` | 18/18 | — | — | — | — | — |
-| `background_noise_type` | 18/18 | — | — | — | — | — |
-| `background_noise_severity` | 18/18 | — | — | — | — | — |
-| `audio_quality` | 18/18 | 16/25 | — | — | — | — |
-| `speaker_overlap_present` | 12/18 | 13/25 | — | 21/27* | 34/50* | — |
-| `long_silence_present` | 18/18 | — | — | 21/27 | — | — |
-| `confidence` | not independently scorable (calibration, not a pass/fail field) | | | | | |
+| Field | 3 known calls (6-trial, n=18) | Harper Valley (n=25) | AMI Corpus (n=27) | AMI 2-speaker (n=50) |
+|---|---|---|---|---|
+| `emotional_tone` | 12/18 | 21/25 | — | — |
+| `emotional_intensity` | 18/18 | — | — | — |
+| `background_noise_present` | 18/18 | — | — | — |
+| `background_noise_type` | 18/18 | — | — | — |
+| `background_noise_severity` | 18/18 | — | — | — |
+| `audio_quality` | 18/18 | 16/25 | — | — |
+| `speaker_overlap_present` | 12/18 | 13/25 | 21/27* | 34/50* |
+| `long_silence_present` | 18/18 | — | 21/27 | — |
+| `confidence` | not independently scorable (calibration, not a pass/fail field) | | | |
 
 \* AMI's `speaker_overlap_present` results are **not counted as good
 results** — both score below their own sample's trivial baseline. See their
@@ -91,7 +91,7 @@ own docstring for why the other 5 can't be tested against this corpus).
 
 Real human speakers, but scripted comedic delivery, not customer-service
 speech — kept in the evidence base as a documented domain-mismatch case,
-not scored as a capability result (see `TECHNICAL_MEMO_V2.md`).
+not scored as a capability result (see `TECHNICAL_MEMO.md`).
 
 | Field | Pass | Fail | Notes |
 |---|---|---|---|
@@ -123,7 +123,7 @@ CC-BY-4.0 HuggingFace dataset before use (`eval/ami_2speaker_eval.py`).
 
 Full writeup with the complete research trail (three rejected variants — a
 naive threshold, RandomForest, windowed pooling — plus the one that was
-ultimately built and tested end-to-end) is in `TECHNICAL_MEMO_V2.md`.
+ultimately built and tested end-to-end) is in `TECHNICAL_MEMO.md`.
 Summary here, because it's real evidence worth keeping even though the
 system running in production doesn't use it:
 

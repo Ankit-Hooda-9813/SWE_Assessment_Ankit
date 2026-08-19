@@ -115,7 +115,7 @@ templates for adding a new comparison:
 | `eval/tune_overlap_real.py` | same, against real Harper Valley audio |
 | `eval/tune_noise_ensemble.py` | soft-voting vs. hard-switch for noise-type models (soft-voting rejected — regressed the dev set) |
 | `eval/tune_noise_gate.py` | confidence-gated noise-type ensemble (shipped — fixes the one real regression at zero dev-set cost) |
-| `eval/tune_overlap_sortformer.py` | NVIDIA Sortformer as an overlap backend (rejected — see `TECHNICAL_MEMO_V2.md`) |
+| `eval/tune_overlap_sortformer.py` | NVIDIA Sortformer as an overlap backend (rejected — see `TECHNICAL_MEMO.md`) |
 | `eval/ami_eval.py` | `long_silence_present` + `speaker_overlap_present` against real AMI meeting audio, independent per-speaker ground truth |
 | `eval/meld_eval.py` | tone polarity against real Friends dialogue — **result excluded from the record**, see below |
 
@@ -126,7 +126,7 @@ than reported as-is: the cause was an acoustic domain mismatch (scripted
 sitcom delivery is more vocally energetic than this system's real-call
 calibration baseline, so "neutral" MELD lines trip the arousal-based
 escalation logic), not a genuine tone-judgment failure — see
-`TECHNICAL_MEMO_V2.md`'s "MELD" section for the full diagnosis. This is the
+`TECHNICAL_MEMO.md`'s "MELD" section for the full diagnosis. This is the
 concrete example to follow for any *new* dataset: a below-baseline score is
 a reason to pull full diagnostics and check domain fit, not a number to
 copy into a results table.
@@ -138,7 +138,7 @@ speaker it trained on, report macro-F1 + confusion matrix.
 
 ## 6. Before trusting any result
 
-- Read `TECHNICAL_MEMO_V2.md` first — it documents what's actually shipped
+- Read `TECHNICAL_MEMO.md` first — it documents what's actually shipped
   vs. tested-and-rejected, and why. A few things that look like they should
   help (NISQA/DNSMOS quality ensemble, noise-type soft-voting, NVIDIA
   Sortformer for overlap) were built, measured, and deliberately not shipped

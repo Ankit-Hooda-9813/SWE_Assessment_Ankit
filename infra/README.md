@@ -84,7 +84,7 @@ as you need it" is strictly cheaper than a managed platform's idle billing.
   faster-whisper small) peaks at ~6-8GB RAM warm, comfortably inside 8GB;
   moving to the heavier tier (whisper-medium, or shipping emotion2vec+ as a
   live ensemble member rather than an eval-only comparison) would need
-  `t4g.xlarge` (16GB) instead — see TECHNICAL_MEMO_V2.md for why that tier
+  `t4g.xlarge` (16GB) instead — see TECHNICAL_MEMO.md for why that tier
   is not the current default.
 
 ```
