@@ -14,3 +14,11 @@ _panns_cache/
 requirements/*.ogg
 requirements/labels.csv
 requirements/*.pdf
+data/eval_batch.zip
+
+# Never commit exported Claude Code session transcripts — they can contain
+# real secrets typed or diffed during a session (this repo learned that the
+# hard way; see git history cleanup).
+*.txt
+!requirements.txt
+!requirements-dev.txt
