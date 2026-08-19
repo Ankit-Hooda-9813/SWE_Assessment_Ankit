@@ -119,7 +119,7 @@ class Settings(BaseSettings):
 
     # --- behaviour ---
     privacy_mode: PrivacyMode = PrivacyMode.HYBRID
-    tone_provider_order: str = "gemini,groq,local"
+    tone_provider_order: str = "azure_openai,local"
     asr_backend: str = "auto"  # auto | local | groq | none
 
     # Transcription uploads the audio file. `hybrid` promises the audio never
@@ -172,34 +172,33 @@ class Settings(BaseSettings):
     self_consistency_confidence: float = 0.80
 
     # --- credentials ---
-    gemini_api_key: str = ""
+    # ASR only now — Groq no longer answers tone (see app/llm/providers.py;
+    # Azure OpenAI is the sole tone provider). Kept for transcription, where
+    # Groq's whisper-large-v3-turbo is ~38x faster than local Whisper.
     # Accepts GROK_API_KEY too. Groq (the inference provider, keys `gsk_`) and
     # Grok (xAI's model, keys `xai-`) are different products with confusingly
     # similar names, and the misspelling is easy to make.
     groq_api_key: str = Field("", validation_alias=AliasChoices("GROQ_API_KEY", "GROK_API_KEY"))
     cerebras_api_key: str = ""
+    azure_openai_api_key: str = Field("", validation_alias=AliasChoices("AZURE_OPENAI_APIKEY", "AZURE_OPENAI_API_KEY"))
+    azure_openai_endpoint: str = ""
+    # Azure addresses models by deployment name, not the raw model id — this is
+    # whichever deployment was created on the resource, e.g. "gpt-5-mini".
+    azure_openai_deployment: str = "gpt-5-mini"
+    azure_openai_api_version: str = "2024-10-21"
 
     # --- models ---
-    # Ordered by accuracy, tried in order. Measured, not assumed:
-    # gemini-3.5-flash-lite scored 0/3 on tone and answered `neutral` to
-    # everything, while flash scores 2/3 on the identical prompt — a five-class
-    # emotional judgement is past what the lite tier does well.
-    #
-    # The chain exists because the free tier meters per model per day, and meters
-    # the good model hard (20 requests/day for gemini-3.5-flash). Rotating models
-    # multiplies the daily budget; later entries are less accurate but keep a
-    # batch moving once the better quota is spent.
-    gemini_model: str = "gemini-3.5-flash"
-    gemini_model_chain: str = "gemini-3.5-flash,gemini-flash-latest,gemini-3.5-flash-lite"
-    groq_llm_model: str = "llama-3.3-70b-versatile"
     groq_asr_model: str = "whisper-large-v3-turbo"
     local_whisper_model: str = "small"
     local_whisper_compute: str = "int8"
 
     # --- dashboard ---
-    dashboard_user: str = "autoace"
-    dashboard_password: str = "change-me"
-    session_secret: str = "dev-secret-change-in-production"
+    # No defaults, intentionally: a fallback here would be a real credential
+    # shipped in source and baked into every built image. Missing env vars
+    # should fail startup, not silently serve a guessable login.
+    dashboard_user: str
+    dashboard_password: str
+    session_secret: str
 
     # --- batch ---
     max_batch_files: int = 200
@@ -208,22 +207,9 @@ class Settings(BaseSettings):
     result_ttl_minutes: int = 120
 
     @property
-    def gemini_models(self) -> list[str]:
-        chain = [m.strip() for m in self.gemini_model_chain.split(",") if m.strip()]
-        # Whatever `gemini_model` is set to leads, so overriding it by env still
-        # works without having to restate the whole chain.
-        return [self.gemini_model] + [m for m in chain if m != self.gemini_model]
-
-    @property
-    def gemini_limits(self) -> ProviderLimits:
-        # Per model, per day. Measured against the live free tier, which returned
-        # quotaValue=20 for gemini-3.5-flash — an order of magnitude below what
-        # this was originally set to. Sitting just under it avoids spending
-        # requests to discover the wall.
-        return ProviderLimits(requests_per_minute=8, requests_per_day=18, max_concurrent=1)
-
-    @property
     def groq_limits(self) -> ProviderLimits:
+        # ASR only now — this bucket is keyed "groq-asr" in transcribe.py,
+        # unrelated to tone since Groq no longer answers tone requests.
         return ProviderLimits(requests_per_minute=25, requests_per_day=900, max_concurrent=2)
 
     @property

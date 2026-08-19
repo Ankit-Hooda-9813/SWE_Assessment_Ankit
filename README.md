@@ -81,7 +81,7 @@ competent:
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -r requirements.txt
-cp .env.example .env          # add GEMINI_API_KEY and/or GROQ_API_KEY
+cp .env.example .env          # add AZURE_OPENAI_APIKEY/ENDPOINT and GROQ_API_KEY (ASR)
 .venv/bin/python -m uvicorn app.main:app --port 7860
 ```
 
@@ -102,8 +102,9 @@ these as Space **secrets** (never commit them):
 
 | Secret | Purpose |
 |---|---|
-| `GEMINI_API_KEY` | tone inference |
-| `GROQ_API_KEY` | optional: faster transcription and a failover tone provider |
+| `AZURE_OPENAI_APIKEY` / `AZURE_OPENAI_ENDPOINT` | tone inference — sole tone provider, no daily quota |
+| `AZURE_OPENAI_DEPLOYMENT` | which deployment to call, e.g. `gpt-5-mini` |
+| `GROQ_API_KEY` | optional: faster transcription only, not tone |
 | `DASHBOARD_USER` / `DASHBOARD_PASSWORD` | the login handed to the evaluator |
 | `PRIVACY_MODE` | `local_only`, `hybrid` (default), or `full` |
 
@@ -232,8 +233,8 @@ stage) — instrumented against the 3 known calls, not estimated.
 | SER — wav2vec2-dim (`emotional_intensity`) | $0.00000 | 1.99 s/min |
 | SER — emotion2vec+ (v2 addition) | $0.00000 | 1.49 s/min |
 | ASR — Groq whisper-large-v3-turbo | $0.00067 | 0.81 s/min |
-| LLM — tone, the one metered call | $0.00092 | 1.01 s/min |
-| **API total** | **$0.00159 — unchanged from v1** | **5.89 s/min processing** |
+| LLM — tone, the one metered call | *pending re-measurement* — provider switched to Azure OpenAI (`gpt-5-mini`), a reasoning model that spends real tokens on hidden reasoning before answering; the $0.00092 figure here was Gemini-specific pricing and no longer applies | 1.01 s/min |
+| **API total** | *pending re-measurement, see above* | **5.89 s/min processing** |
 | Ceiling | $0.00300 | |
 
 **v2 added zero new metered API calls** — both new stages are local models, so

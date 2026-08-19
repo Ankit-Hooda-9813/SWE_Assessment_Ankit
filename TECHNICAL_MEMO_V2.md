@@ -13,6 +13,15 @@ alongside what did, the same standard the base repo already holds itself to
 below — and its severity classifier's disclosed dev-set/real-call
 disagreement).
 
+> **Provider update, after this memo's original v2 work:** Gemini and Groq
+> were removed from the tone chain entirely and replaced with Azure OpenAI.
+> The Gemini-specific narrative below (the emotion2vec+ fix diagnosis, the
+> free-tier quota framing) is kept as accurate history — it's what actually
+> happened and why the `reconcile()` rules exist — but the *current* system
+> no longer calls Gemini or Groq for tone. See "Tone provider replaced:
+> Gemini/Groq → Azure OpenAI" below for what changed, why, and the
+> re-validated numbers.
+
 ## v1 → v2, one table, with sources
 
 Two different "v1 baselines" appear across this repo's history, and they
@@ -397,6 +406,69 @@ since been wired in narrowly — see the updated section above.
 
 </details>
 
+### Tone provider replaced: Gemini/Groq → Azure OpenAI — **shipped**
+
+Gemini's free tier caps at 18-20 requests/day per model, which one real
+evaluation batch exhausts before the evaluator sees a result — the whole
+reason the old chain rotated through three Gemini models and fell back to
+Groq. Groq turned out to be broken independent of quota: its configured
+model, `llama-3.3-70b-versatile`, was fully retired from Groq's catalog —
+every call 404s, confirmed by forcing the chain to Groq-only and reading the
+live exception, not assumed from a changelog. Both providers are now removed
+from the tone chain entirely (`app/llm/providers.py`); Azure OpenAI is the
+sole remote tone provider, addressed by deployment name
+(`AZURE_OPENAI_DEPLOYMENT`, default `gpt-5-mini`). Groq is unchanged in its
+other role — ASR transcription, 38x faster than local Whisper — since that
+was never the problem.
+
+**Why this doesn't just trade one quota problem for another:** Azure OpenAI
+bills per token with no daily request ceiling, so a batch cannot exhaust a
+free-tier budget mid-run the way the Gemini chain did. That was the actual
+motivation, not a marginal accuracy gain.
+
+**Model selection, tested not assumed.** Two candidate deployments
+(`gpt-5-mini`, `gpt-4.1-mini`) were compared against the known calls before
+picking one. A first pass showed `gpt-4.1-mini` a full point ahead — later
+traced to a broken local dev environment (`funasr` and, separately,
+`torchaudio` both silently missing, so emotion2vec+ corroboration was not
+actually running for either candidate during that comparison). With both
+dependencies genuinely fixed, both deployments score identically: **22/24**,
+matching Gemini's own best validated result exactly, including the identical
+error pattern (`call_003`'s tone and overlap, the same two disclosed,
+root-caused misses documented throughout this memo — not new failures).
+`gpt-5-mini` was chosen as the shipped default over `gpt-4.1-mini` on tie-
+breaking grounds: ~2.5x the token-per-minute quota headroom and lower
+per-token cost on this Azure resource, not an accuracy difference.
+
+**Re-verified over 6 independent trials** (`eval/repeat_trial.py --trials 6`,
+cache off), not the single run above:
+
+```
+FIELD                     call_001   call_002   call_003    AVG
+emotional_tone                1.00       1.00       0.00   0.67
+(all other fields 1.00 across all three calls)
+ALL FIELDS AVERAGE ACCURACY: 0.917  (22/24)
+```
+
+Tone answers were **perfectly stable across all 6 trials** — `upset` all 6
+times on call_001, `neutral` all 6 times on call_002, `neutral` all 6 times
+on call_003 — zero variance. This is more consistent than Gemini's own
+documented behavior (one labelled clip returned three different answers
+across 7 runs at temperature 0), though six trials on three clips is not
+enough evidence to claim `gpt-5-mini` is inherently more deterministic than
+Gemini in general — it's evidence of what this specific configuration does,
+not a general claim about the model family.
+
+**What still needs re-measurement, disclosed rather than left stale:** the
+$0.00092/audio-minute tone-LLM cost figure in the cost table below was
+Gemini-specific pricing and no longer applies as-is. `gpt-5-mini` is a
+reasoning model that spends real tokens on hidden reasoning before the
+visible answer (measured directly: 64 reasoning tokens on a two-word test
+reply), which changes the token-cost shape even though the prompt itself is
+unchanged. The API-cost table has not yet been re-measured against live
+Azure OpenAI billing at time of writing — flagged here rather than left
+carrying a number that's quietly wrong.
+
 ### Overlap detection, second attempt: NVIDIA NeMo Sortformer — **tested thoroughly, rejected**
 
 Researched alternatives to the licence-gated pyannote backend specifically
@@ -530,10 +602,11 @@ top, the current single-run known-calls total is 22/24 (0.917)** — see
 because no signal in the system — text, dimensional, or categorical —
 supports `satisfied`, and the cepstral overlap detector's ~0.59 AUC ceiling
 is real; see the relevant sections above for why both were deliberately left
-alone rather than patched. All tone-provider calls confirmed live against
-Gemini (or its documented free-tier fallback chain) in diagnostics, not
-assumed — these are genuine model-vs-label disagreements, not fallback
-artifacts. On three data points, none of this should be trusted over the
+alone rather than patched. All tone-provider calls in this historical run
+were confirmed live against Gemini (the provider in use at the time — since
+replaced by Azure OpenAI, see "Tone provider replaced" above) in
+diagnostics, not assumed — these are genuine model-vs-label disagreements,
+not fallback artifacts. On three data points, none of this should be trusted over the
 79-clip and 150-clip dev-set numbers as evidence of what generalizes, per
 the same reasoning `noise.py`'s own docstrings already apply to synthetic-vs-real
 evidence — but three data points measured three times each, with the exact

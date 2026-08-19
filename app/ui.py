@@ -274,16 +274,17 @@ two failure modes the specification calls out.
 |---|---|
 | Privacy mode | `{settings.privacy_mode.value}` |
 | Tone provider order | `{', '.join(settings.tone_providers)}` |
-| Tone model | `{settings.gemini_model}` |
+| Tone model | `{settings.azure_openai_deployment}` |
 | Transcription | `{settings.asr_backend}` |
 | Worker concurrency | `{settings.worker_concurrency}` |
 
-### Free-tier pacing
+### Pacing
 
-Requests are throttled below the published free-tier limits rather than
-discovering them through errors. When a batch is waiting on that budget the
-status line says so explicitly. Identical files are cached by content hash, so
-re-running a batch costs nothing.
+Tone runs against Azure OpenAI, billed per token with no daily request quota
+to exhaust — a batch cannot run out of budget mid-run the way a free-tier
+chain could. Transcription still throttles below Groq's published free-tier
+limits rather than discovering them through errors. Identical files are
+cached by content hash, so re-running a batch costs nothing.
 
 ### Handling of uploaded audio
 

@@ -3,7 +3,7 @@
 Setup once, at the repo root (`/Users/ankitspc/Work/SWE_Assessment_Ankit_Hooda`):
 
 ```bash
-set -a; source .env; set +a   # loads GEMINI_API_KEY / GROQ_API_KEY / HF_TOKEN
+set -a; source .env; set +a   # loads AZURE_OPENAI_APIKEY/ENDPOINT / GROQ_API_KEY / HF_TOKEN
 ```
 
 All commands below are run from the repo root with `./.venv/bin/python`

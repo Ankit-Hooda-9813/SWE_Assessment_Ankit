@@ -70,8 +70,8 @@ def health() -> dict:
         "privacy_mode": settings.privacy_mode.value,
         "tone_providers": settings.tone_providers,
         "providers_configured": {
-            "gemini": bool(settings.gemini_api_key),
-            "groq": bool(settings.groq_api_key),
+            "azure_openai": bool(settings.azure_openai_api_key and settings.azure_openai_endpoint),
+            "groq_asr": bool(settings.groq_api_key),
         },
         "rate_limiters": REGISTRY.snapshot(),
     }

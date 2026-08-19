@@ -15,14 +15,19 @@ pydantic-settings>=2.2
 fastapi>=0.115
 uvicorn[standard]>=0.30
 python-multipart>=0.0.9
-# gradio 6 is required: gradio 5 caps pydantic below the version google-genai needs.
 gradio>=6.0,<7
 
 torch>=2.2
+# funasr (emotion2vec+, v2's second SER opinion) imports torchaudio directly at
+# module load time even when unused for decoding - without it the build fails
+# on the SER_ENSEMBLE=true image regardless of whether audio ever needs it.
+torchaudio>=2.2
 transformers>=5.0
 safetensors>=0.4
 
-google-genai>=1.0
+openai>=1.50
+# ASR only (whisper-large-v3-turbo transcription) — Groq no longer answers
+# tone; Azure OpenAI (via the openai package above) is the sole tone provider.
 groq>=0.11
 faster-whisper>=1.0
 

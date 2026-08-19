@@ -60,8 +60,7 @@ def _content_key(path: Path, settings: Settings) -> str:
         for chunk in iter(lambda: handle.read(1 << 20), b""):
             digest.update(chunk)
     digest.update(settings.privacy_mode.value.encode())
-    digest.update(settings.gemini_model.encode())
-    digest.update(settings.groq_llm_model.encode())
+    digest.update(settings.azure_openai_deployment.encode())
     return digest.hexdigest()
 
 

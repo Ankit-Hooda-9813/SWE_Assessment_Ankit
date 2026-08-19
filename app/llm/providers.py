@@ -9,7 +9,6 @@ because a free tier ran out mid-run.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import re
 from collections import Counter
@@ -18,22 +17,22 @@ from pathlib import Path
 
 from app.audio.prosody import Prosody
 from app.config import PrivacyMode, Settings
-from app.llm.prompts import RESPONSE_SCHEMA, build_prompt
+from app.llm.prompts import build_prompt
 from app.ratelimit import REGISTRY, RateLimitExceeded
 from app.schema import EmotionalIntensity, EmotionalTone
 
 
-# Shown verbatim in the dashboard and attached to every affected result. The
-# free tier allows roughly 20 requests a day on the most accurate model, so a
-# real evaluation batch will cross this line — better to say so plainly than to
-# let the accuracy quietly drop with no explanation.
+# Shown verbatim in the dashboard and attached to every affected result when
+# the primary provider (Azure OpenAI) fails and the chain falls to the local
+# lexicon+prosody heuristic. Unlike the Gemini-era version of this notice,
+# there is no daily quota to blame here — Azure OpenAI is billed per token
+# with no free-tier request ceiling, so degradation now means a real outage
+# or misconfiguration, not routine quota exhaustion.
 DEGRADED_NOTICE = (
-    "Gracefully degraded: the primary tone model's free daily quota is spent, so "
-    "a fallback model answered. Emotional tone is less accurate on the fallback "
-    "(2/3 versus 0/3 on the labelled clips); every other field is unaffected and "
-    "still fully measured. This deployment runs entirely on free tiers for an "
-    "assignment, and that trade-off is deliberate — a paid key removes the limit "
-    "at roughly $1.59 per 1,000 audio-minutes."
+    "Gracefully degraded: the primary tone provider failed or is unreachable, "
+    "so a local lexicon-and-prosody heuristic answered instead. That heuristic "
+    "is measurably weaker than the LLM path; every other field is unaffected "
+    "and still fully measured."
 )
 
 
@@ -153,147 +152,48 @@ def _to_result(payload: dict, provider: str) -> ToneResult:
 
 
 # --------------------------------------------------------------------------
-# Gemini
+# Azure OpenAI
 # --------------------------------------------------------------------------
 
-class GeminiProvider(ToneProvider):
-    """Google Gemini. The only backend that can hear the audio directly."""
+class AzureOpenAIProvider(ToneProvider):
+    """Azure-hosted OpenAI models. Text-only, same rationale as Groq.
 
-    name = "gemini"
-
-    def available(self, settings: Settings) -> bool:
-        return bool(settings.gemini_api_key)
-
-    async def infer(
-        self, *, prosody, transcript, duration_sec, audio_path, settings, emotion=None,
-    ) -> ToneResult:
-        """Try each configured model in turn.
-
-        The free tier meters *per model per day*, and the good model is metered
-        hard: `gemini-3.5-flash` allows 20 requests a day, which one evaluation
-        batch would exhaust before the evaluator saw a result. Because the quota
-        is per model rather than per project, rotating through several models
-        multiplies the daily budget — the first model is the most accurate one
-        and later entries are the fallbacks that keep a batch moving once it is
-        spent.
-        """
-        from google import genai
-        from google.genai import types
-
-        send_audio = settings.audio_may_leave() and audio_path is not None
-        prompt = build_prompt(prosody, transcript, duration_sec, has_audio=send_audio, emotion=emotion)
-
-        client = genai.Client(api_key=settings.gemini_api_key)
-        parts: list = [prompt]
-        if send_audio:
-            parts.append(types.Part.from_bytes(
-                data=Path(audio_path).read_bytes(),
-                mime_type=_mime_for(audio_path),
-            ))
-
-        errors: list[str] = []
-        for model_name in settings.gemini_models:
-            # One bucket per model, because that is how the quota is scoped.
-            bucket = REGISTRY.get(f"gemini:{model_name}", settings.gemini_limits)
-            try:
-                await bucket.acquire(max_wait_sec=20.0)
-            except RateLimitExceeded as exc:
-                errors.append(f"{model_name}: {exc}")
-                continue
-            try:
-                response = await asyncio.to_thread(
-                    client.models.generate_content,
-                    model=model_name,
-                    contents=parts,
-                    config=types.GenerateContentConfig(
-                        response_mime_type="application/json",
-                        response_schema=RESPONSE_SCHEMA,
-                        temperature=0.0,
-                        # Generous on purpose. This is a reasoning model and its
-                        # thinking tokens come out of the same budget as the
-                        # answer; at 400 the JSON was truncated mid-string, which
-                        # failed the parse, failed the provider, and dropped the
-                        # clip to the local heuristic without saying so. The
-                        # answer is ~60 tokens, and output is billed on tokens
-                        # produced rather than on the cap.
-                        max_output_tokens=2048,
-                    ),
-                )
-                result = _to_result(_parse_json(response.text), self.name)
-                result.model = model_name
-                return result
-            except Exception as exc:  # noqa: BLE001
-                message = str(exc)
-                errors.append(f"{model_name}: {type(exc).__name__}")
-                # A daily quota does not recover within this batch. Burn the
-                # bucket so we stop paying the latency of asking again.
-                if "RESOURCE_EXHAUSTED" in message or "429" in message:
-                    bucket.exhaust_day()
-                continue
-            finally:
-                bucket.release()
-
-        # Every model is spent or failing. Raise so the chain moves to Groq and
-        # then to the local heuristic rather than failing the clip.
-        raise RateLimitExceeded(
-            "gemini (all models: " + "; ".join(errors[:3]) + ")"
-        )
-
-
-def _mime_for(path: Path) -> str:
-    return {
-        ".ogg": "audio/ogg", ".opus": "audio/ogg", ".mp3": "audio/mpeg",
-        ".wav": "audio/wav", ".flac": "audio/flac", ".m4a": "audio/mp4",
-        ".aac": "audio/aac", ".webm": "audio/webm",
-    }.get(Path(path).suffix.lower(), "audio/wav")
-
-
-# --------------------------------------------------------------------------
-# Groq
-# --------------------------------------------------------------------------
-
-class GroqProvider(ToneProvider):
-    """Groq text models. Fast, free tier, and does not train on API data.
-
-    Text-only, so it reads the transcript and the measured prosody description
-    rather than the audio. This is the backend that makes `hybrid` mode viable.
+    Paid from the first token — no daily quota to exhaust, unlike Gemini's
+    free tier (18-20 requests/day). Azure addresses models by deployment
+    name, not the raw model id, so `settings.azure_openai_deployment` must
+    match a deployment that actually exists on the resource.
     """
 
-    name = "groq"
+    name = "azure_openai"
 
     def available(self, settings: Settings) -> bool:
-        return bool(settings.groq_api_key)
+        return bool(settings.azure_openai_api_key and settings.azure_openai_endpoint)
 
     async def infer(
         self, *, prosody, transcript, duration_sec, audio_path, settings, emotion=None,
     ) -> ToneResult:
-        from groq import AsyncGroq
+        from openai import AsyncAzureOpenAI
 
         prompt = build_prompt(prosody, transcript, duration_sec, has_audio=False, emotion=emotion)
-        bucket = REGISTRY.get("groq", settings.groq_limits)
-        await bucket.acquire()
-        try:
-            client = AsyncGroq(api_key=settings.groq_api_key)
-            kwargs: dict = {
-                "model": settings.groq_llm_model,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.0,
-                "max_tokens": 1500,
-            }
-            # Constrained decoding is rejected by reasoning models, which emit a
-            # <think> block ahead of the answer, and by the agentic `compound`
-            # models. `_parse_json` copes with both shapes, so the constraint is
-            # only requested where it is actually supported.
-            model_name = settings.groq_llm_model
-            if not (model_name.startswith("groq/compound") or "qwen" in model_name):
-                kwargs["response_format"] = {"type": "json_object"}
-
-            response = await client.chat.completions.create(**kwargs)
-            result = _to_result(_parse_json(response.choices[0].message.content), self.name)
-            result.model = model_name
-            return result
-        finally:
-            bucket.release()
+        client = AsyncAzureOpenAI(
+            azure_endpoint=settings.azure_openai_endpoint,
+            api_key=settings.azure_openai_api_key,
+            api_version=settings.azure_openai_api_version,
+        )
+        response = await client.chat.completions.create(
+            model=settings.azure_openai_deployment,
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+            # Generous on purpose, same reason as Gemini's cap above: the
+            # GPT-5 family spends real tokens on hidden reasoning before the
+            # visible answer (measured: 64 reasoning tokens on a two-word
+            # reply), and a tight cap truncates to empty content rather than
+            # a short answer.
+            max_completion_tokens=3000,
+        )
+        result = _to_result(_parse_json(response.choices[0].message.content), self.name)
+        result.model = settings.azure_openai_deployment
+        return result
 
 
 # --------------------------------------------------------------------------
@@ -382,8 +282,7 @@ class LocalProvider(ToneProvider):
 
 
 PROVIDERS: dict[str, ToneProvider] = {
-    "gemini": GeminiProvider(),
-    "groq": GroqProvider(),
+    "azure_openai": AzureOpenAIProvider(),
     "local": LocalProvider(),
 }
 
@@ -484,12 +383,11 @@ async def _infer_once(
                 audio_path=audio_path, settings=settings, emotion=emotion,
             )
             result.attempts = attempts + [f"{name}:ok"]
-            # Degraded if we fell to a later provider, or stayed on Gemini but
-            # had to rotate off its most accurate model.
-            rotated = bool(
-                result.model and settings.gemini_models and result.model != settings.gemini_models[0]
-            )
-            result.degraded = index > 0 or rotated
+            # Degraded only if we fell past the primary provider — there is no
+            # per-provider model rotation left to account for now that Azure
+            # OpenAI is the sole remote provider (one fixed deployment, no
+            # multi-model quota chain the way Gemini needed).
+            result.degraded = index > 0
             if result.degraded:
                 result.degraded_notice = DEGRADED_NOTICE
             result.latency_sec = time.perf_counter() - started
