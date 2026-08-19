@@ -27,7 +27,7 @@ costs at paid-tier list price.
 | | |
 |---|---|
 | Dashboard URL | `https://autoace-voice-trial.agreeableocean-25551650.eastasia.azurecontainerapps.io/dashboard` |
-| Login | `autoace` / `kkGQ9HJQFihe2etwrXIyy6C-` |
+| Login | sent separately, not committed here |
 | REST API | same host, `/api/docs`, HTTP Basic auth with the same credentials |
 | Host | Azure Container Apps, Consumption plan, `min-replicas=0` (scale-to-zero — first request after idle takes longer while it cold-starts, then stays warm) |
 
