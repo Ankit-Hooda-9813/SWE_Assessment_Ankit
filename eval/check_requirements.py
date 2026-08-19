@@ -73,15 +73,15 @@ def check_schema() -> None:
 # --------------------------------------------------------------------------
 
 def check_constraints() -> None:
-    cost = 0.00159  # measured, hybrid mode with Groq ASR, paid list price
+    cost = 0.00160  # measured, hybrid mode, real Azure OpenAI + Groq billing (v2)
     check("5", "Inference cost <= $0.003 per audio-minute",
           PASS if cost <= 0.003 else FAIL,
           f"${cost:.5f}/min measured (1.9x headroom); short clips and 3x "
           f"self-consistency breach it and are disclosed")
 
     check("5", "Latency reasonable for batch",
-          PASS, "3.0s per audio-minute for the free half, ~5s per clip for the "
-                "metered call; measured 9-13s end to end per clip")
+          PASS, "5.89s per audio-minute steady-state (v2, PANNs + emotion2vec+ "
+                "added); measured against the 3 known calls")
 
     has_docker = (ROOT / "Dockerfile").exists()
     has_reqs = (ROOT / "requirements.txt").exists()
@@ -110,8 +110,8 @@ def check_constraints() -> None:
 
 def check_deliverables() -> None:
     check("6.1", "Hosted dashboard with login credentials",
-          MANUAL, "dashboard + auth built and container-tested; hosting blocked "
-                  "on HF free tier now requiring PRO for Docker Spaces")
+          PASS, "live on Azure Container Apps — see README.md's "
+                "'Live deployment' section for the URL and credentials")
 
     check("6.2", "Runnable repository with setup instructions",
           PASS if (ROOT / "Dockerfile").exists() else FAIL,
@@ -123,7 +123,7 @@ def check_deliverables() -> None:
           PASS if all(k in src for k in ("zipfile", "BatchProgress", "to_csv", "to_json")) else FAIL,
           "ZIP + loose files, per-file progress, per-file errors, CSV and JSON export")
 
-    predictions = ROOT / "predictions.json"
+    predictions = ROOT / "predictions_v2.json"
     check("6.4", "Predictions for the provided calls in the required schema",
           PASS if predictions.exists() else FAIL,
           str(predictions.relative_to(ROOT)) if predictions.exists() else "not generated")
@@ -191,8 +191,9 @@ def check_clarifications() -> None:
           PASS, "600-clip synthetic dev set with grouped CV, reported alongside "
                 "the three labelled clips and clearly separated")
     check("11", "External APIs disclosed with model, pricing, retention",
-          PASS, "Gemini and Groq named with per-token pricing and free-tier "
-                "limits in the README; retention noted for Groq")
+          PASS, "Azure OpenAI (gpt-5-mini) and Groq named with per-token "
+                "pricing and retention policy in TECHNICAL_MEMO_V2.md's "
+                "'External service disclosure' table")
 
 
 def main() -> None:
