@@ -143,7 +143,7 @@ input. On a random sample of 25:
 | Field | Result | Basis |
 |---|---|---|
 | `speaker_overlap_present` | 13/25 (0.52) — ground truth matched to this system's own 0.35s minimum-overlap standard; moved only 12→13/25 when re-checked, confirming it's real | independently derived from separate channel timing |
-| `emotional_tone`, coarse polarity | 20/25 (0.80) | Harper Valley's own label is 3-class; compared at polarity level only |
+| `emotional_tone`, coarse polarity | 21/25 (0.84), current — see "Tone bias" below for the full story | Harper Valley's own label is 3-class; compared at polarity level only |
 | `audio_quality`, MOS-bucketed | 16/25 (0.64) | a weak proxy — `caller_mos` rates intelligibility on clean studio audio, not the defects this system actually targets |
 | `background_noise_*` | not tested | Harper Valley has no noise annotation |
 | `long_silence_present` | not tested | any derived truth would reuse this system's own logic |
