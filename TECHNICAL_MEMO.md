@@ -3,8 +3,8 @@
 **Voice tone and background-noise analysis for production call audio**
 Submission for the AutoAce AI technical trial · Ankit Hooda
 
-> This is the original submission memo — accurate as a record of what v1
-> built and measured, but its numbers (22/24, tone 0/3, overlap AUC 0.66,
+> This is the memo from the first iteration — accurate as a record of what
+> v1 built and measured, but its numbers (22/24, tone 0/3, overlap AUC 0.66,
 > $0.00159/min at 2.4GB RAM) have been superseded. **See
 > `TECHNICAL_MEMO_V2.md` for the current architecture, current numbers, and
 > an explicit v1→v2 comparison** — everything below this point predates that

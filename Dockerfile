@@ -60,9 +60,9 @@ snapshot_download('audeering/wav2vec2-large-robust-12-ft-emotion-msp-dim', \
 # image does not have; curl is used directly instead, at build time, so a
 # cold container never blocks a request on a 320MB download.
 RUN mkdir -p /home/appuser/panns_data \
- && curl -sL -o /home/appuser/panns_data/class_labels_indices.csv \
+ && curl -sL --retry 5 --retry-delay 3 --retry-all-errors -o /home/appuser/panns_data/class_labels_indices.csv \
       "http://storage.googleapis.com/us_audioset/youtube_corpus/v1/csv/class_labels_indices.csv" \
- && curl -sL -o "/home/appuser/panns_data/Cnn14_mAP=0.431.pth" \
+ && curl -sL --retry 5 --retry-delay 3 --retry-all-errors -o "/home/appuser/panns_data/Cnn14_mAP=0.431.pth" \
       "https://zenodo.org/record/3987831/files/Cnn14_mAP%3D0.431.pth?download=1"
 
 # v2 addition: emotion2vec+ base (~1.1GB via modelscope), the second SER

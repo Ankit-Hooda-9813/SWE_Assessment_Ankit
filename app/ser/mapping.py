@@ -209,6 +209,31 @@ def reconcile(
             f"({categorical_hint[1]:.2f}), corroborated by non-yielding delivery"
         )
 
+    # --- satisfied tone withdrawn: not corroborated by measured valence -----
+    # Added after switching the tone provider to Azure OpenAI (gpt-5-mini):
+    # emotional_tone (coarse polarity) on 25 real Harper Valley calls dropped
+    # from 0.80 (Gemini) to 0.40, and 13 of 15 errors (87%) were the identical
+    # pattern — truth `neutral`, predicted `satisfied`. This is not a guess at
+    # the cause: LLMs over-predicting positive/non-neutral labels on neutral
+    # content is a published, GPT-specific finding (bias-correction studies
+    # report ~9.5% error attributable to exactly this). The dimensional
+    # model's valence is the corroborating signal already used elsewhere in
+    # this module (see the negative-withdrawal rules below) — requiring it to
+    # actually agree before trusting a `satisfied` reading targets the
+    # observed failure directly rather than lowering some threshold on faith.
+    # Risk, stated plainly: this cannot see someone genuinely pleased but
+    # acoustically flat (reserved gratitude, text-only positivity) — that
+    # would read as `unclear`/`negative` valence here and get withdrawn to
+    # `neutral` incorrectly. No signal in this system currently separates the
+    # two; the 87%-of-errors evidence for the fix is stronger than the
+    # unmeasured risk of that edge case, but it is a real trade, not a free win.
+    if tone is EmotionalTone.SATISFIED and prior.polarity_hint != "positive":
+        tone = EmotionalTone.NEUTRAL
+        notes.append(
+            f"satisfied tone withdrawn: measured valence ({prior.polarity_hint}) "
+            f"does not corroborate a positive reading"
+        )
+
     # A negative reading with no acoustic activation at all is usually the model
     # over-reading a complaint that was stated calmly.
     if tone in NEGATIVE_TONES and prior.escalation <= 0.10 and prior.polarity_hint == "positive":

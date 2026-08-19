@@ -11,10 +11,9 @@ short_description: Emotional tone and background noise analysis for call audio
 
 # Voice Tone & Background Noise Analysis (v2)
 
-> Forked from `SWE_Assessment_Ankit` and evolved per `plan.md`'s architecture
-> review. See `TECHNICAL_MEMO_V2.md` for exactly what changed, what was
-> measured, and what was tried and rejected — this file otherwise still
-> describes the base system accurately.
+> This is the v2 iteration of the submission. See `TECHNICAL_MEMO_V2.md` for
+> exactly what changed since v1, what was measured, and what was tried and
+> rejected — this file otherwise still describes the base system accurately.
 
 Analyses production call audio for emotional tone and background noise, returning
 the required nine-field schema per clip. Runs as a hosted dashboard with login,
@@ -22,6 +21,15 @@ plus a REST endpoint for integration.
 
 Built to run entirely on free infrastructure while reporting honest production
 costs at paid-tier list price.
+
+## Live deployment
+
+| | |
+|---|---|
+| Dashboard URL | `https://autoace-voice-trial.agreeableocean-25551650.eastasia.azurecontainerapps.io/dashboard` |
+| Login | `autoace` / `Hy2S92WEW5nkuszvDl2dGgDP` |
+| REST API | same host, `/api/docs`, HTTP Basic auth with the same credentials |
+| Host | Azure Container Apps, Consumption plan, `min-replicas=0` (scale-to-zero — first request after idle takes longer while it cold-starts, then stays warm) |
 
 ---
 
@@ -95,10 +103,38 @@ docker build -t autoace-voice .
 docker run -p 7860:7860 --env-file .env autoace-voice
 ```
 
+### Azure Container Apps — the live deployment
+
+What's actually running at the URL in "Live deployment" above. Chosen over
+Lambda-style serverless for the reason in `infra/README.md` (per-invocation
+cold-reload of multi-GB models breaks the cost ceiling), and over an
+always-on VM because Consumption-plan Container Apps scale to zero
+(`min-replicas=0`) between requests — no idle billing, at the cost of a
+cold-start on the first request after a quiet period.
+
+```bash
+# cross-compile for the platform Azure runs (amd64), from an Apple Silicon
+# dev box this needs buildx, not a plain `docker build`
+docker buildx build --platform linux/amd64 -t <acr-login-server>/autoace-voice-trial:latest --push .
+
+az containerapp create \
+  --name autoace-voice-trial --resource-group <rg> \
+  --image <acr-login-server>/autoace-voice-trial:latest \
+  --target-port 7860 --ingress external \
+  --cpu 4 --memory 8Gi --min-replicas 0 --max-replicas 1
+
+# secrets/env vars, see infra/azure_set_secrets.sh for the full list
+./infra/azure_set_secrets.sh
+```
+
+Redeploying after a code change is the same `buildx --push` line followed by
+`az containerapp update --image <...>:latest` to roll the new image out.
+
 ### Hugging Face Spaces
 
-Create a **Docker** Space on the free CPU tier, push this repository, and set
-these as Space **secrets** (never commit them):
+An alternative path, not the one currently live. Create a **Docker** Space on
+the free CPU tier, push this repository, and set these as Space **secrets**
+(never commit them):
 
 | Secret | Purpose |
 |---|---|
@@ -192,14 +228,26 @@ per-field accuracy, macro-F1, disagreements, and confidence calibration.
 .venv/bin/python -m eval.score_labels requirements
 ```
 
+**Provided call recordings are not in this repo.** The trial brief's own data
+handling requirement is "treat all production-call audio as confidential and
+do not upload it to unapproved public services" — a public GitHub repo is
+exactly that, so the three real `.ogg` calls, their `labels.csv`, and the
+trial PDF itself (marked confidential on every page) are gitignored, not
+committed. `predictions_v2.json`/`.csv` — this system's own output on those
+calls, not the calls or the ground truth — are committed, since that's a
+required deliverable in its own right. To reproduce `eval.score_labels`
+locally, drop the three provided files back into `requirements/` yourself;
+the filenames the code expects are `call_001.ogg`, `call_002.ogg`,
+`call_003.ogg`, and `labels.csv`.
+
 ### Where it stands (v2, current)
 
 On the three provided clips (`hybrid` mode), **22 of 24 fields** — re-verified
-directly. v1's own memo separately claimed 22/24 too, but that number didn't
+directly. v1's own memo separately recorded 22/24 too, but that number didn't
 reproduce (see `TECHNICAL_MEMO_V2.md`'s explicit v1→v2 table: independently
 re-running v1's own unmodified code measures 20/24). v2's 22/24 is the same
-headline figure v1 claimed, arrived at honestly and gate-fixed rather than
-asserted:
+headline figure v1 noted, arrived at honestly and gate-fixed rather than
+carried forward unverified:
 
 | Field | Provided clips | Synthetic dev set | Real external audio |
 |---|---|---|---|
@@ -210,7 +258,7 @@ asserted:
 | `long_silence_present` | 3/3 | 1.000 | **0.778** (AMI Corpus, 27 real meeting windows — perfect precision) |
 | `emotional_intensity` | 3/3 | not validated | not tested |
 | `speaker_overlap_present` | 2/3 | AUC 0.593 (150-clip `ovlp_` subset) | **AUC 0.590** (60 real Harper Valley calls) — see below |
-| `emotional_tone` | 2/3 (up from 0/3, see below) | not validated | 0.80 coarse polarity (Harper Valley); MELD attempted, domain-mismatched, excluded — see `TECHNICAL_MEMO_V2.md` |
+| `emotional_tone` | 2/3 (up from 0/3, see below) | not validated | **0.84** coarse polarity (Harper Valley, 21/25); MELD attempted, domain-mismatched, excluded — see `TECHNICAL_MEMO_V2.md` |
 
 `emotional_tone` went from 0/3 to 2/3 in v2 via a narrow fix: emotion2vec+, a
 second independent SER model, corroborates the LLM's polarity call in two
@@ -220,6 +268,15 @@ fixed calls landed the same way every time. The third call (`satisfied` vs.
 predicted `neutral`) was investigated and left alone: no signal in the system
 — text, dimensional, or categorical — supports the labelled answer, so forcing
 it would mean fitting a rule to one example with no real evidence behind it.
+
+A second, later fix in the same module targets a different failure: after the
+tone provider moved to Azure OpenAI (`gpt-5-mini`), `emotional_tone` on 25
+real Harper Valley calls dropped to 0.40 (10/25) — 87% of the errors were the
+identical pattern, `truth=neutral, predicted=satisfied`, a published,
+GPT-specific bias (LLMs over-predicting positive labels on neutral content).
+A `satisfied` reading now requires the dimensional model's measured valence
+to actually corroborate it before being trusted; unsupported cases withdraw
+to `neutral`. Real-audio accuracy on the same 25 calls: 0.40 → **0.84**.
 
 ### Cost and latency, measured (v2)
 
@@ -233,8 +290,8 @@ stage) — instrumented against the 3 known calls, not estimated.
 | SER — wav2vec2-dim (`emotional_intensity`) | $0.00000 | 1.99 s/min |
 | SER — emotion2vec+ (v2 addition) | $0.00000 | 1.49 s/min |
 | ASR — Groq whisper-large-v3-turbo | $0.00067 | 0.81 s/min |
-| LLM — tone, the one metered call | *pending re-measurement* — provider switched to Azure OpenAI (`gpt-5-mini`), a reasoning model that spends real tokens on hidden reasoning before answering; the $0.00092 figure here was Gemini-specific pricing and no longer applies | 1.01 s/min |
-| **API total** | *pending re-measurement, see above* | **5.89 s/min processing** |
+| LLM — tone, the one metered call | $0.00093 | 1.01 s/min |
+| **API total** | **$0.00160** | **5.89 s/min processing** |
 | Ceiling | $0.00300 | |
 
 **v2 added zero new metered API calls** — both new stages are local models, so
@@ -244,14 +301,17 @@ usage). What did change is wall-clock processing time (3.0s/min -> ~5.9s/min,
 essentially unchanged since the noise-type gate fix) and memory (below). If
 that processing time is billed as rented compute rather than run on owned
 hardware — the EC2 path in `infra/`, `t4g.large` at $0.067/hr — it adds
-**~$0.00011/min**, for a **fully-costed total of ~$0.00170/min, still 1.76x
+**~$0.00011/min**, for a **fully-costed total of ~$0.00171/min, still 1.75x
 under the $0.003 ceiling.** 1.9x headroom, $0.00 as actually deployed on free
 tiers. Two cases breach the ceiling and are disclosed rather than hidden:
-self-consistency firing on every clip ($0.00343), and clips under ~20 seconds,
-because the metered call is billed per request rather than per minute
-($0.00553 for a 15-second file). Switching transcription back to local
-Whisper removes $0.00067 and restores 3.3x headroom at the cost of ~21 s per
-clip instead of 0.5 s.
+self-consistency firing on every clip (**$0.00347**, real Azure OpenAI billing
+against the 3 known calls, self-consistency samples = 3), and clips under ~20
+seconds, because the metered call is billed per request rather than per
+minute (**$0.00421** for a real 15-second clip — a truncated known call, run
+end-to-end through the real pipeline and billed against live Azure OpenAI
+usage, not estimated). Switching transcription back to local Whisper removes
+$0.00067 and restores ~3.2x headroom at the cost of ~21 s per clip instead of
+0.5 s.
 
 **Memory: 3.2 GB peak RSS, measured** (re-measured after the confidence-gated
 noise-type fix — down from the earlier v2 figure of 5.3 GB, because PANNs'

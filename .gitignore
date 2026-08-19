@@ -6,3 +6,11 @@ data/devset/
 data/*.json
 .DS_Store
 uploads/
+_panns_cache/
+
+# Confidential production call data (trial PDF: "do not upload to unapproved
+# public services"). Kept locally for reproducing eval/score_labels.py etc.,
+# never committed. See README.md's "Provided call recordings" note.
+requirements/*.ogg
+requirements/labels.csv
+requirements/*.pdf

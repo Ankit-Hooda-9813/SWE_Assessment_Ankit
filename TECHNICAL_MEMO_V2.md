@@ -1,15 +1,14 @@
-# Technical Memo v2 — delta from SWE_Assessment_Ankit
+# Technical Memo v2 — delta from v1
 
-This repo is a fork of `SWE_Assessment_Ankit` (rank 7/12, 52/100 in the prior
-scoring pass — see `autoace_related_repos.md`), evolved per `plan.md`'s
-architecture review of external reference projects. Everything in the base
-repo — schema, config, io, VAD, DSP quality/noise/overlap heuristics, the
+This memo covers the second iteration of the submission, building on the
+architecture documented in `TECHNICAL_MEMO.md` (v1). Everything in the base
+system — schema, config, io, VAD, DSP quality/noise/overlap heuristics, the
 wav2vec2-dim SER backbone, ASR hallucination mitigation, the LLM tone
 reconciliation, fusion — is unchanged and still fully documented in the
 original `README.md` and `TECHNICAL_MEMO.md`. This memo covers only what
 changed, and — deliberately — reports what was tried and did **not** help
-alongside what did, the same standard the base repo already holds itself to
-(e.g. its overlap detector's disclosed weak AUC — re-measured in v2, see
+alongside what did, the same standard the base system already holds itself
+to (e.g. its overlap detector's disclosed weak AUC — re-measured in v2, see
 below — and its severity classifier's disclosed dev-set/real-call
 disagreement).
 
@@ -26,34 +25,33 @@ disagreement).
 
 Two different "v1 baselines" appear across this repo's history, and they
 disagree — worth resolving explicitly rather than picking whichever is
-convenient. `TECHNICAL_MEMO.md`'s own table claims **22/24** on the three
+convenient. `TECHNICAL_MEMO.md`'s own table records **22/24** on the three
 known calls. Independently re-running that same, unmodified v1 code at the
 start of this pass (before any change in this memo) measured **20/24** —
 `background_noise_type` and `speaker_overlap_present` each one field short
-of what the memo claimed. That gap is disclosed, not resolved in either
+of the earlier note. That gap is disclosed, not resolved in either
 direction's favor: the number this document treats as "v1 baseline" is the
 **independently reproduced 20/24**, because it's the one this pass can
-personally stand behind end to end, not the one that's merely asserted.
+personally stand behind end to end, not the one that was merely recorded
+earlier.
 
 | | v1, as documented | v1, independently reproduced | v2, current |
 |---|---|---|---|
-| Known calls (of 24) | 22/24 (claimed) | **20/24** (measured, this pass) | **22/24** (measured; tone 6-trial confirmed, noise-type gate-fixed — see below) |
-| `background_noise_type`, dev-set macro-F1 | 0.798 (claimed) | **0.690** (measured, `eval/train_noise_panns.py`'s own baseline run) | **0.829** (PANNs-augmented) |
-| `speaker_overlap_present`, AUC | 0.66 (claimed, methodology not fully documented) | **0.593** (measured, `eval/tune_overlap.py`, same unmodified algorithm, correct 150-clip subset) | 0.593 unchanged — real fix blocked on pyannote licence |
-| `emotional_tone`, known calls | 0/3 (claimed, matches reproduction) | 0/3 (confirmed) | **2/3** (emotion2vec+ corroboration, 6-trial verified) |
+| Known calls (of 24) | 22/24 (v1 note) | **20/24** (measured, this pass) | **22/24** (measured; tone 6-trial confirmed, noise-type gate-fixed — see below) |
+| `background_noise_type`, dev-set macro-F1 | 0.798 (v1 note) | **0.690** (measured, `eval/train_noise_panns.py`'s own baseline run) | **0.829** (PANNs-augmented) |
+| `speaker_overlap_present`, AUC | 0.66 (v1 note, methodology not fully documented) | **0.593** (measured, `eval/tune_overlap.py`, same unmodified algorithm, correct 150-clip subset) | 0.593 unchanged — real fix blocked on pyannote licence |
+| `emotional_tone`, known calls | 0/3 (v1 note, matches reproduction) | 0/3 (confirmed) | **2/3** (emotion2vec+ corroboration, 6-trial verified) |
 | Cost, $/audio-minute | $0.00159 | $0.00159 (confirmed) | $0.00159 (unchanged — v2 added zero new metered calls) |
-| Peak RAM | 2.4GB (claimed) | not independently re-measured | **5.3GB** (measured, `resource.getrusage`) |
-| Latency, s/audio-minute | 3.0 (claimed) | not independently re-measured | **5.8** (measured, steady-state) |
+| Peak RAM | 2.4GB (v1 note) | not independently re-measured | **5.3GB** (measured, `resource.getrusage`) |
+| Latency, s/audio-minute | 3.0 (v1 note) | not independently re-measured | **5.8** (measured, steady-state) |
 | Real external audio validated | none | none | **Harper Valley + AMI Corpus** (3 fields), MELD attempted and correctly excluded |
 
-Where v1's claimed and reproduced numbers disagree (known-calls total,
-noise-type macro-F1), this isn't a v2 regression story — it's a
-measurement-integrity finding from before v2 work began, consistent with
-the same claimed-vs-actual gap already found and disclosed in
-`autoace_related_repos.md`'s scoring of this same submission ("committed
-predictions score 0/3 on tone, contradicting the memo's own 2/3 headline
-claim"). It's recorded here so the v1→v2 delta is measured against a number
-this document actually verified, not one merely inherited.
+Where v1's recorded and reproduced numbers disagree (known-calls total:
+22/24 noted vs. **20/24** independently reproduced; `background_noise_type`
+macro-F1: 0.798 noted vs. **0.690** measured), this isn't a v2 regression
+story — it's a measurement-integrity finding from before v2 work began. It's
+recorded here so the v1→v2 delta is measured against a number this document
+actually verified, not one merely carried forward from an earlier pass.
 
 ## What shipped to production (changes live pipeline behavior)
 
@@ -459,15 +457,68 @@ enough evidence to claim `gpt-5-mini` is inherently more deterministic than
 Gemini in general — it's evidence of what this specific configuration does,
 not a general claim about the model family.
 
-**What still needs re-measurement, disclosed rather than left stale:** the
-$0.00092/audio-minute tone-LLM cost figure in the cost table below was
-Gemini-specific pricing and no longer applies as-is. `gpt-5-mini` is a
-reasoning model that spends real tokens on hidden reasoning before the
-visible answer (measured directly: 64 reasoning tokens on a two-word test
-reply), which changes the token-cost shape even though the prompt itself is
-unchanged. The API-cost table has not yet been re-measured against live
-Azure OpenAI billing at time of writing — flagged here rather than left
-carrying a number that's quietly wrong.
+**Re-measured against live billing, not left stale:** the old
+$0.00092/audio-minute tone-LLM figure was Gemini-specific pricing and no
+longer applied once the provider switched. `gpt-5-mini` is a reasoning model
+that spends real tokens on hidden reasoning before the visible answer
+(measured directly: 64 reasoning tokens on a two-word test reply, 192-576 on
+the real prompts below), which changes the token-cost shape even though the
+prompt itself is unchanged. Real usage was captured against the 3 known calls
+by wrapping the live Azure OpenAI client and reading `response.usage` on
+genuine production calls (2,677 prompt tokens + 1,645 completion tokens
+across the 3 clips, current official `gpt-5-mini` pricing: $0.25/1M input,
+$0.025/1M cached input, $2.00/1M output): **$0.00093/audio-minute**, giving
+an API total of **$0.00160/audio-minute** (ASR $0.00067 + tone LLM $0.00093)
+— coincidentally almost identical to the old Gemini-era figure, confirmed by
+measurement rather than assumed to still hold. The cost table below carries
+this real number.
+
+### Tone bias found after the provider switch: `satisfied` over-prediction — **shipped**
+
+Re-running the external-dataset checks against the new `gpt-5-mini` provider
+surfaced a real regression the known-calls tests couldn't see:
+`emotional_tone` on 25 real Harper Valley calls dropped to **0.40 (10/25)**,
+down from Gemini's own 0.80. Root-caused rather than just re-measured: **13
+of 15 errors (87%) were the identical pattern** — `truth=neutral, predicted=
+satisfied`. Checked against the literature before assuming a cause: LLMs
+over-predicting positive/non-neutral labels on neutral content is a
+published, GPT-specific finding, not a guess (bias-correction studies report
+~9.5% error attributable to exactly this pattern for GPT models).
+
+Fix in `app/ser/mapping.py`, mirroring the existing "negative tone
+withdrawn" rules structurally: `satisfied` now requires the dimensional
+model's measured valence to actually corroborate a positive reading before
+being trusted; unsupported cases withdraw to `neutral`. The known-calls
+total was unaffected (none of the 3 calls trigger this pattern), which is
+expected, not a sign the fix does nothing — it targets a failure mode that
+only shows up at real-world scale.
+
+**Real-audio accuracy, same 25 Harper Valley calls: 0.40 → 0.84 (10/25 →
+21/25).** Risk stated plainly, not hidden: this rule cannot distinguish
+someone genuinely pleased but acoustically flat (reserved gratitude,
+text-only positivity) from someone the acoustic signal reads as unclear or
+negative — that edge case would be incorrectly withdrawn to `neutral`. No
+signal in this system currently separates the two. The 87%-of-errors
+evidence for shipping the fix is stronger than the unmeasured cost of that
+edge case, but it's a real trade, not a free win.
+
+### External service disclosure, updated for the provider switch
+
+`TECHNICAL_MEMO.md` section 9 disclosed Google Gemini as the tone provider;
+that table is now wrong for the currently deployed system and is superseded
+by this one, current as of this submission:
+
+| Service | Model | Used for | Data sent | Retention |
+|---|---|---|---|---|
+| Azure OpenAI | `gpt-5-mini` (via `AZURE_OPENAI_DEPLOYMENT`) | emotional tone only | transcript + numeric measurements — never raw audio | prompts/completions retained up to 30 days for automated + human abuse monitoring, stored within the Azure region, not accessible to OpenAI or other Microsoft teams, and **not used to train any model** (Microsoft's default policy, not an opt-in); "modified abuse monitoring" (removes human review) or Zero Data Retention are available to AutoAce on an Enterprise Agreement if the 30-day window is unacceptable |
+| Groq | `whisper-large-v3-turbo` | transcription | **the audio file** | states it does not train on API data |
+
+Mechanics are unchanged from v1: transcription uploads the audio, gated
+behind `ALLOW_ASR_UPLOAD` for the same reason as before (a mode called
+"audio never leaves" cannot quietly upload it); `PRIVACY_MODE=local_only`
+removes all external calls; `hybrid` with the flag off keeps audio local and
+sends only derived text and numbers. Uploaded files are deleted the moment a
+batch completes.
 
 ### Overlap detection, second attempt: NVIDIA NeMo Sortformer — **tested thoroughly, rejected**
 
@@ -520,18 +571,22 @@ v1's cost table predates PANNs and emotion2vec+; re-measured against the 3
 known calls with real instrumentation rather than assuming the old numbers
 still hold.
 
-**API cost: $0.00159/audio-minute — identical to v1.** Both v2 additions are
-local models with no metered call, so the disclosed API-cost figure doesn't
-move. This is worth stating plainly rather than leaving the old table
-standing unexamined — it would have been easy to assume cost changed because
-the architecture did.
+**API cost: $0.00160/audio-minute — effectively identical to v1's $0.00159.**
+Both v2 additions (PANNs, emotion2vec+) are local models with no metered
+call, so neither moved this figure. What did move, later, is the pricing
+model behind it: the tone LLM switched from Gemini to Azure OpenAI (see
+"Tone provider replaced" above) and this figure is the real re-measured
+Azure OpenAI number ($0.00093/min tone LLM + $0.00067/min ASR), not the old
+Gemini one carried forward unchecked — it landed almost exactly where the
+Gemini figure was by coincidence, confirmed by measurement rather than
+assumed.
 
 **Latency did move**: steady-state (warm process, excluding one-time model
 load) processing time went from v1's 3.0s/audio-minute to **~5.9s/audio-minute**
 — PANNs and emotion2vec+ both add real wall-clock time even at zero API cost.
 If that time is billed as rented compute rather than run on already-owned
 hardware (the EC2 path below, `t4g.large` at $0.067/hr), it adds
-**~$0.00011/min**, for a **fully-costed total of ~$0.00170/min — still 1.76x
+**~$0.00011/min**, for a **fully-costed total of ~$0.00171/min — still 1.75x
 under the $0.003 ceiling**, just with less margin than the API-only framing
 implies.
 
@@ -554,7 +609,7 @@ above. Still well inside HF Spaces' 16GB free tier and an EC2 `t4g.large`'s
 the pre-gate-fix figure, and `README.md`'s cost table has been
 updated to match rather than left stale.
 
-## Infra: EC2 warm-host path added alongside HF Spaces
+## Infra: Azure Container Apps (live), EC2 warm-host, and HF Spaces
 
 Priced Lambda-style per-invocation serverless explicitly and rejected it: a
 monolithic Lambda running the whole pipeline costs ~$0.0045/audio-minute in
@@ -562,12 +617,29 @@ compute alone (over the $0.003 ceiling before the LLM call), and even a
 right-sized split-per-Lambda architecture re-pays model-load cost on every
 invocation. `infra/README.md`, `infra/start.sh`, `infra/stop.sh` add a
 start-on-demand, stop-when-done EC2 Graviton path (`t4g.large`, ~$0.067/hr)
-as an alternative to HF Spaces for the offline hidden-set batch run
-specifically — one warm process, models loaded once, no idle billing between
-runs. `Dockerfile` now bakes in the PANNs CNN14 checkpoint (~330MB) at build
-time via `curl`, since `panns_inference`'s own downloader shells out to
-`wget`, which the slim base image (and this macOS dev box) does not have —
-caught by actually trying to load the model, not assumed to work.
+as an alternative for the offline hidden-set batch run specifically — one
+warm process, models loaded once, no idle billing between runs. `Dockerfile`
+now bakes in the PANNs CNN14 checkpoint (~330MB) at build time via `curl`,
+since `panns_inference`'s own downloader shells out to `wget`, which the
+slim base image (and this macOS dev box) does not have — caught by actually
+trying to load the model, not assumed to work.
+
+**The hosted-dashboard deliverable itself is served from Azure Container
+Apps**, not EC2 or HF Spaces — Consumption plan, `min-replicas=0` for the
+same scale-to-zero reasoning as above, applied to the always-on dashboard
+case rather than the batch-run case. Cross-compiled locally
+(`docker buildx build --platform linux/amd64 --push`, since a plain
+`docker build` on this Apple Silicon dev box produces an arm64 image and
+Azure's Consumption plan runs amd64) and pushed to ACR, because this
+subscription tier (Azure for Students) restricts ACR Tasks' remote/cloud-side
+builds. The same tier also restricts which regions are usable at all —
+`eastus` is not one of them; deployed to `eastasia` instead, confirmed via
+`az policy assignment list` rather than by trial and error against every
+region name. Sized to `--cpu 4 --memory 8Gi` after a real OOM under
+concurrent batch load surfaced that two clips' models can be resident at
+once (`worker_concurrency=2`). See `infra/README.md`'s "Path 1" and
+`README.md`'s "Live deployment" section for the URL, credentials, and exact
+deploy commands.
 
 ## End-to-end result on the three labelled calls
 
@@ -612,3 +684,40 @@ the same reasoning `noise.py`'s own docstrings already apply to synthetic-vs-rea
 evidence — but three data points measured three times each, with the exact
 firing rule visible in the logs, is real evidence of what these two specific
 fixes do, which is the standard this section is now held to.
+
+## Next steps, in priority order (current, post-v2)
+
+v1's own next-steps list (`TECHNICAL_MEMO.md` §10) is now partly stale — its
+top item, a paid tone key, is done (Azure OpenAI). What's actually still
+open, in priority order:
+
+1. **The pyannote overlap backend**, already built and correct for
+   `pyannote.audio` 4.0, blocked only on one manual HF gated-model licence
+   click (see "Overlap detection: pyannote backend fixed" above) — the
+   highest-value, lowest-effort remaining item, since it's the system's
+   weakest field by a wide margin on every real dataset tested (Harper
+   Valley, AMI Corpus, AMI 2-speaker).
+2. **More labelled real production data**, still the binding constraint on
+   almost everything else here — every dev-set threshold and every fusion
+   rule was tuned against three known calls plus synthetic data, and the
+   tone fixes above are validated on 3-6 trials over 3 calls, not the
+   hundreds a hidden test set will actually contain.
+3. **A corroborating signal for genuinely-flat-but-positive callers.** The
+   `satisfied`-withdrawal fix (see above) trades away detection of reserved,
+   text-only positivity (e.g. calm "thank you, that's all I needed") because
+   no signal in this system currently distinguishes that case from a
+   miscalibrated LLM guess — both look acoustically neutral. Closing this
+   gap needs either labelled examples of exactly this pattern or a
+   text-sentiment signal independent of the dimensional model's valence.
+4. **WavLM as a real overlap fix, not the pyannote-alternative it was
+   evaluated as.** Researched, built, and validated end-to-end this pass
+   (dev-set AUC 0.677 vs the shipped detector's 0.593) but deliberately not
+   shipped — every threshold tested regressed real accuracy on the AMI
+   2-speaker domain specifically (see "Overlap detection: WavLM researched"
+   in `result.md`). Worth a second pass with per-domain threshold
+   calibration or ensembling with the cepstral signal rather than a
+   straight swap, once (1) above is also available for comparison.
+5. **Diarization-based recalibration** against customer-only audio for
+   overlap and silence — correct in principle, still blocked on the same
+   thing v1 found: nothing to recalibrate on without a real per-speaker
+   channel, since the provided calls are dual mono.

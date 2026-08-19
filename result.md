@@ -3,9 +3,13 @@
 Every field this system outputs, scored against every dataset it's been tested
 against, as of the current code (`gpt-5-mini` via Azure OpenAI as sole tone
 provider, `app/ser/mapping.py`'s `satisfied`-withdrawal fix applied,
-`app/audio/overlap.py`'s WavLM backend shipped as the default overlap
-detector — pyannote first if configured, then WavLM, cepstral only as a
-last-resort fallback). Numbers
+`app/audio/overlap.py` on the plain cepstral detector — pyannote first if
+configured, cepstral as the fallback. A WavLM-based second backend was
+researched, built, and validated with real evidence — see "Overlap
+detection: WavLM researched, not shipped" below — but the deployment
+decision was to keep the simpler cepstral-only detector rather than accept
+its real-domain trade-off, so it is not in the code path currently running).
+Numbers
 are pass/fail counts, not percentages, so sample size is always visible next
 to the result — a field's accuracy means something different at n=18 than
 at n=30.
@@ -26,7 +30,7 @@ themselves to.
 | `background_noise_type` | 18/18 | — | — | — | — | — |
 | `background_noise_severity` | 18/18 | — | — | — | — | — |
 | `audio_quality` | 18/18 | 16/25 | — | — | — | — |
-| `speaker_overlap_present` | 12/18 | **16/25**§ | — | 21/27* | **10/50**§* | — |
+| `speaker_overlap_present` | 12/18 | 13/25 | — | 21/27* | 34/50* | — |
 | `long_silence_present` | 18/18 | — | — | 21/27 | — | — |
 | `confidence` | not independently scorable (calibration, not a pass/fail field) | | | | | |
 
@@ -34,12 +38,13 @@ themselves to.
 results** — both score below their own sample's trivial baseline. See their
 sections below. Included for completeness, not as a win.
 
-§ These two numbers moved this round, in opposite directions, for the same
-reason — see "Overlap detection: WavLM shipped" below. Harper Valley's
-13/25 → 16/25 is the real improvement being shipped for; AMI 2-speaker's
-34/50 → 10/50 is the honest cost of that same change on a domain (meetings)
-this system was never built for. Both are the current, real, shipped
-numbers — neither is stale.
+§ A WavLM-based classifier was built and validated as a candidate
+replacement for this field — see "Overlap detection: WavLM researched, not
+shipped" below for the full trail (Harper Valley 13/25 → 16/25, a real
+improvement; AMI 2-speaker 34/50 → 10/50, a real regression on a domain this
+system was never built for). The numbers in this table are the **currently
+shipped** cepstral-only detector's, not WavLM's — that backend was not
+adopted, so it is not what's reflected here.
 
 † HaessigDB's ground truth is a **derived mapping I constructed myself**, not
 an original annotation — see its section below for why that matters more
@@ -66,7 +71,7 @@ nothing on its own.
 | `background_noise_type` | 18/18 | 0 | |
 | `background_noise_severity` | 18/18 | 0 | |
 | `audio_quality` | 18/18 | 0 | |
-| `speaker_overlap_present` | 12/18 | 6/18 | call_001 6/6, call_002 6/6, call_003 0/6 — unchanged after shipping WavLM as the default backend (see below); call_003's overlap sits at the 10th percentile of the positive-class distribution, an intrinsically weak instance neither detector reliably catches, not a backend-specific gap |
+| `speaker_overlap_present` | 12/18 | 6/18 | call_001 6/6, call_002 6/6, call_003 0/6 — the disclosed weak cepstral detector, real fix blocked on a pyannote licence click. call_003's overlap sits at the 10th percentile of the positive-class distribution, an intrinsically weak instance |
 | `long_silence_present` | 18/18 | 0 | |
 
 ### Harper Valley — 25 real bank-support calls
@@ -79,7 +84,7 @@ own docstring for why the other 5 can't be tested against this corpus).
 | Field | Pass | Fail | Notes |
 |---|---|---|---|
 | `emotional_tone` (coarse polarity) | 21/25 | 4/25 | up from 10/25 before the `satisfied`-withdrawal fix; now above the original 20/25 Gemini baseline |
-| `speaker_overlap_present` | **16/25** | 9/25 | up from 13/25 with the shipped cepstral detector — see "Overlap detection: WavLM shipped" below. This is the domain the improvement was actually made for |
+| `speaker_overlap_present` | 13/25 | 12/25 | matches the same ~0.59 AUC ceiling measured elsewhere — a real, consistent weakness. A WavLM classifier measured 16/25 here in testing (see below) but was not adopted for deployment |
 | `audio_quality` (MOS-bucketed proxy) | 16/25 | 9/25 | weak proxy by design — `caller_mos` measures intelligibility on clean studio audio, not the clipping/dropout defects this system actually targets |
 
 ### MELD — 30 real-actor sitcom utterances (*Friends*)
@@ -101,7 +106,7 @@ emotional-tone labels exist for this corpus at all.
 | Field | Pass | Fail | Notes |
 |---|---|---|---|
 | `long_silence_present` | 21/27 | 6/27 | first-ever independent, non-circular validation of this field; perfect precision (tp=8, fp=0) |
-| `speaker_overlap_present` | 21/27 | 6/27 | **stale — measured before WavLM shipped, not re-run.** Was already below the 24/27 (0.889) trivial baseline with cepstral; given the WavLM-on-AMI-2-speaker result below (worse, not better, on the same kind of overlap-heavy meeting domain), re-running this with WavLM would very likely also come in lower, not higher — flagged rather than left looking current |
+| `speaker_overlap_present` | 21/27 | 6/27 | **not a good result** — a trivial "always predict overlap" baseline scores 24/27 (0.889) on this overlap-heavy sample, beating the system. Confusion matrix has **zero true negatives** (tp=21, fp=3, fn=3, tn=0). Recorded as reinforcing evidence for the already-known overlap weakness, not a new capability. This is the currently shipped cepstral detector's number |
 
 ### AMI 2-speaker overlap benchmark — `Trelis/ami-2speaker-test`, 50 clips
 
@@ -110,16 +115,17 @@ AMI meeting audio reconstructed as 2-speaker virtual meetings with an
 explicit `overlap_ratio` per clip, independently verified as a real,
 CC-BY-4.0 HuggingFace dataset before use (`eval/ami_2speaker_eval.py`).
 
-| Field | Pass (current, WavLM) | Pass (historical, cepstral-only) | Notes |
+| Field | Pass | Fail | Notes |
 |---|---|---|---|
-| `speaker_overlap_present` | **10/50** | 34/50 | trivial always-predict-overlap baseline on this sample scores **42/50 (0.84)** — both backends score below it, WavLM considerably more so. This is the honest cost of the change shipped below — disclosed plainly, not hidden because the other number moved the right way |
+| `speaker_overlap_present` | 34/50 | 16/50 | trivial always-predict-overlap baseline on this sample scores **42/50 (0.84)** — the system's 0.68 is below it. This is the currently shipped cepstral detector's number; a tested WavLM alternative scored *worse* here (10/50, see below) |
 
-### Overlap detection: WavLM shipped as the default backend
+### Overlap detection: WavLM researched, validated, deliberately not shipped
 
 Full writeup with the complete research trail (three rejected variants — a
-naive threshold, RandomForest, windowed pooling — plus the one that shipped)
-is in `TECHNICAL_MEMO_V2.md`. Summary of what changed and why, since it's
-the reason two of the numbers above moved in opposite directions:
+naive threshold, RandomForest, windowed pooling — plus the one that was
+ultimately built and tested end-to-end) is in `TECHNICAL_MEMO_V2.md`.
+Summary here, because it's real evidence worth keeping even though the
+system running in production doesn't use it:
 
 Researched published overlapped-speech-detection work looking for a signal
 source structurally different from cepstral pitch tracking. Found WavLM
@@ -134,7 +140,7 @@ ranking into a deployed accuracy number — this AMI 2-speaker set is 84%
 overlap-positive, a base rate no real customer-service call produces, and no
 threshold chosen honestly (from dev data only, never touching this set's
 labels) could survive that big a shift: 13/50, then 10/50 with a properly
-cross-validated threshold, both below the shipped cepstral detector's 34/50.
+cross-validated threshold, both below the cepstral detector's 34/50.
 
 **Re-tested against Harper Valley instead of stopping there** — real
 bank-support calls, 40% overlap-positive, much closer to both the dev set's
@@ -142,12 +148,20 @@ own rate and to what a real deployment would actually see. Same classifier,
 same dev-only threshold, only the target domain changed: accuracy 13/25 →
 **16/25**, a real win on the domain this system is actually built for.
 
-**Shipped with the trade-off disclosed, not hidden**: `app/audio/overlap.py`
-now tries pyannote (if configured) → WavLM → cepstral, in that order. The
-evidence dict every WavLM-backed result returns states in its own
-`reliability` field that this hasn't been validated on overlap-heavy domains
-far from typical call-center rates — so a result reviewed in isolation,
-without this file, still carries the caveat.
+**Built, wired in, and validated end-to-end — then deliberately not
+deployed.** The trade-off was real and disclosed rather than hidden: a
+genuine win on the target domain (Harper Valley) against a genuine loss on
+an out-of-scope domain (AMI meetings). The decision made was to keep the
+simpler, already-understood cepstral detector rather than accept that
+trade-off, on the reasoning that a backend switch shouldn't make *any*
+tested domain meaningfully worse, even one outside the primary target.
+`app/audio/overlap.py` currently runs pyannote (if configured) → cepstral
+only — no WavLM in the active code path, and the trained classifier
+(`app/models/overlap_wavlm.joblib`) is not in the repo. `eval/train_overlap_wavlm.py`
+is kept and reproduces the dev-set comparison (0.593 → 0.677 AUC) that
+motivated the investigation — rerunning it regenerates the classifier and the
+result. Reversing this decision later needs a training run, not new
+research: the method, the evidence, and the code are all documented.
 
 ### HaessigDB — `nwllr/haessigDB`, 25 acted call-center calls
 
@@ -205,19 +219,22 @@ alongside it — not resolved in either direction.
   ratings, on a sample so skewed toward extremes that a trivial constant
   prediction beats the system. Averaging any of these into one number would
   misrepresent all of them.
-- `speaker_overlap_present` is no longer one uniform story across datasets —
-  it improved on the domain that matters (Harper Valley, real
-  customer-service calls: 13/25 → 16/25) and got worse on a domain that was
-  never the target (AMI 2-speaker meetings: 34/50 → 10/50), from the same
-  shipped change. Both are real, current numbers. The pyannote fix, still
-  blocked on one manual licence acceptance, remains the actual long-term
-  answer regardless of backend — WavLM is a measured improvement on the
-  target domain, not a replacement for the fix that would work everywhere.
-- Two of the results in this file are below a trivial baseline (AMI
-  2-speaker's current 10/50, HaessigDB's 16/25 and 13/25). Reported exactly
-  as measured in every case — a below-baseline number on a real dataset is
-  evidence to sit with and explain, not a reason to keep searching for a
-  dataset that comes back flattering instead.
+- `speaker_overlap_present`'s weakness is consistent across every dataset
+  the *shipped* cepstral detector has been tested on (known calls, Harper
+  Valley, AMI Corpus, AMI 2-speaker) — four independent confirmations of the
+  same ~0.59 AUC ceiling. A WavLM-based alternative was researched and would
+  trade a real win on the target domain (Harper Valley: 13/25 → 16/25) for a
+  real loss on a domain outside the target (AMI 2-speaker: 34/50 → 10/50) —
+  that trade-off was tested all the way through and deliberately not
+  accepted, so it stays a documented option, not the shipped behavior. The
+  pyannote fix, still blocked on one manual licence acceptance, remains the
+  actual long-term answer — it doesn't carry this trade-off at all.
+- Several results in this file are below a trivial baseline (AMI Corpus
+  21/27, HaessigDB's 16/25 and 13/25, and the WavLM AMI 2-speaker result
+  discussed but not shipped). Reported exactly as measured in every case —
+  a below-baseline number on a real dataset is evidence to sit with and
+  explain, not a reason to keep searching for a dataset that comes back
+  flattering instead.
 - This file changed twice in one research pass because the first real-audio
   check (AMI) was itself re-examined rather than accepted as final — it was
   the wrong target domain, not proof the underlying signal was bad. Worth
